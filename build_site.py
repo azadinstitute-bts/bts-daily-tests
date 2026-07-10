@@ -87,11 +87,43 @@ def inject_noindex(text: str) -> str:
     return re.sub(r"(<head[^>]*>)", r"\1" + marker, text, count=1, flags=re.I)
 
 
+SAFE_STORAGE_HELPERS = "function azadSafeStorageGet(k){try{return window.localStorage?window.localStorage.getItem(k):null}catch(e){return null}}function azadSafeStorageSet(k,v){try{if(window.localStorage)window.localStorage.setItem(k,v)}catch(e){}}"
+
+
 def make_compatible(text: str) -> tuple[str, bool]:
     patched = False
     if LOOKBEHIND_LINE in text:
         text = text.replace(LOOKBEHIND_LINE, COMPAT_LINE)
         patched = True
+
+    # iPhone Safari can throw a SecurityError when storage is unavailable
+    # (private mode / restricted storage). In the original export this happens
+    # before the submit try/catch, so the review closes and the question page
+    # reappears without any message. Use non-fatal wrappers in the web copy.
+    storage_changed = False
+    if "localStorage.getItem(" in text:
+        text = text.replace("localStorage.getItem(", "azadSafeStorageGet(")
+        storage_changed = True
+    if "localStorage.setItem(" in text:
+        text = text.replace("localStorage.setItem(", "azadSafeStorageSet(")
+        storage_changed = True
+    if storage_changed and "function azadSafeStorageGet(" not in text:
+        marker = "async function submitQuiz("
+        if marker in text:
+            text = text.replace(marker, SAFE_STORAGE_HELPERS + marker, 1)
+        else:
+            text = text.replace("</script>", SAFE_STORAGE_HELPERS + "</script>", 1)
+        patched = True
+
+    # Do not leave async pre-submit failures silent on Safari. The original
+    # review button closes the modal before calling submitQuiz; if the promise
+    # rejects, the student otherwise lands back on the question screen.
+    old_confirm = 'onclick="closeJumpBox();submitQuiz(true)"'
+    new_confirm = 'onclick="closeJumpBox();submitQuiz(true).catch(function(e){showSubmitError(e,\'CLIENT_ERROR\')})"'
+    if old_confirm in text:
+        text = text.replace(old_confirm, new_confirm)
+        patched = True
+
     text = inject_noindex(text)
     return text, patched
 
