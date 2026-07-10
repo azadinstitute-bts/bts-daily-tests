@@ -1,0 +1,2 @@
+रोज़ की अधिकतम 15 HTML files इस folder में रखें।
+फिर PREPARE_TODAY_TESTS.bat चलाएँ।
