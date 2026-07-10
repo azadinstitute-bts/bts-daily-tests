@@ -1,10 +1,68 @@
 [
   {
     "date": "2026-07-10",
-    "title": "Varg 1 Chemistry Weekly Combined – Basic Concepts and Atomic Structure Week 1 Weekly Combined 42 CHEMISTRY LAW",
-    "subject": "Chemistry, Chemistry Pedagogy",
-    "topic": "Atomic Structure Classical, Atomic Structure Quantum, Chemistry Pedagogy And, Mole And Stoichiometry, महत्व कार्यक्षेत्र द्रव्य की प्रकृति laws और Dalton theory",
-    "file": "tests/2026-07-10/varg-1-chemistry-weekly-comb-chemistry-atomic-structure-c-bb82b9ff.html",
+    "week": 1,
+    "day": 5,
+    "schedule_label": "Week 1 • Day 5",
+    "title": "Varg 1 English Vocabulary Spelling One Word Synonyms Antonyms Idioms Week 1 Day 05 29 ENGLISH VOCABULARY SPELL",
+    "subject": "English Vocabulary",
+    "topic": "Antonyms Contextual Usage, Correct Matches Word Association, Homonyms Homophones Homographs, One Word Substitution, Proverbs And Idioms Meaning Usage, Rearrange The Sentence, Rhyme Scheme Based Questions, Spelling Rules And Errors, Synonyms Contextual Usage",
+    "file": "tests/2026-07-10/varg-1-english-vocabulary-sp-english-vocabulary-antonyms-contextua-da231f44.html",
+    "iphone_compat_patch": true
+  },
+  {
+    "date": "2026-07-09",
+    "week": 1,
+    "day": 4,
+    "schedule_label": "Week 1 • Day 4",
+    "title": "Varg 1 English Grammar Non-finite Transformation Agreement Error Finding Week 1 Day 04 20 ENGLISH GRAMMAR FINI",
+    "subject": "English Grammar",
+    "topic": "Figures Ellipsis And Conditional Sentences, Finite And Non-Finite Verbs, Punctuation And Error Finding, Sentence Transformation Purpose Based, Sentence Transformation Structure Based, Subject Verb Agreement Rules",
+    "file": "tests/2026-07-09/varg-1-english-grammar-non-f-english-grammar-figures-ellipsis-a.html",
+    "iphone_compat_patch": true
+  },
+  {
+    "date": "2026-07-08",
+    "week": 1,
+    "day": 3,
+    "schedule_label": "Week 1 • Day 3",
+    "title": "Varg 1 Common Pedagogy Test – Week 1 Day 03 05 COMMERCE PEDAGOGY COMMERCE PEDAGOGY VANI",
+    "subject": "Commerce Pedagogy",
+    "topic": "Commerce Pedagogy Aavashyakta Aur Upyogita, Commerce Pedagogy Karya Kshetra, Commerce Pedagogy Shikshan Uddeshya, Commerce Pedagogy Tarkik Vyakhya, Commerce Pedagogy Vanijya Ki Prakriti",
+    "file": "tests/2026-07-08/varg-1-common-pedagogy-test-commerce-pedagogy-commerce-pedagogy.html",
+    "iphone_compat_patch": true
+  },
+  {
+    "date": "2026-07-07",
+    "week": 1,
+    "day": 2,
+    "schedule_label": "Week 1 • Day 2",
+    "title": "Varg 1 English Grammar Speech Clauses Modals Prepositions Week 1 Day 02 03 ENGLISH GRAMMAR DIRECT INDIRECT SPE",
+    "subject": "English Grammar",
+    "topic": "Adjective And Relative Clauses, Adverb Noun And Non-Finite Clauses, Direct Indirect Speech Basics, Modals And Prepositions Usage, Speech Questions Commands Exclamations",
+    "file": "tests/2026-07-07/varg-1-english-grammar-speec-english-grammar-adjective-and-rela.html",
+    "iphone_compat_patch": true
+  },
+  {
+    "date": "2026-07-06",
+    "week": 1,
+    "day": 1,
+    "schedule_label": "Week 1 • Day 1",
+    "title": "Common Foundation CDP Test – Week 1 Day 01 05 CDP CDP DEVELOPMENT MEANIN",
+    "subject": "CDP",
+    "topic": "CDP Development Meaning And Learning Relation, CDP Domains Of Child Development, CDP Evaluation And Classroom Implications, CDP Heredity Environment And Socialisation, CDP Principles Of Development",
+    "file": "tests/2026-07-06/common-foundation-cdp-test-w-cdp-cdp-development-me-557e68d4.html",
+    "iphone_compat_patch": true
+  },
+  {
+    "date": "2026-07-06",
+    "week": 1,
+    "day": 1,
+    "schedule_label": "Week 1 • Day 1",
+    "title": "Varg 1 English Grammar Tenses Voice Articles Determiners Week 1 Day 01 07 ENGLISH GRAMMAR TENSES PRESENT PAST",
+    "subject": "English Grammar",
+    "topic": "Active Passive Voice Basic Patterns, Articles And Determiners, Passive Voice Modal Perfect Imperative, Tense Transformation And Sequence, Tenses Present Past Future Uses",
+    "file": "tests/2026-07-06/varg-1-english-grammar-tense-english-grammar-active-passive-voi-2a093c6a.html",
     "iphone_compat_patch": true
   }
 ]
