@@ -5,6 +5,8 @@ import html
 import json
 import re
 import shutil
+import subprocess
+import tempfile
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -16,6 +18,7 @@ SITE = ROOT / "docs"
 BRAND = "Bilaspur Test Series"
 SUPPORT = "9981957779 | 9669946966"
 WEBSITE = "bilaspurtestseries.com"
+BUILD_VERSION = datetime.now().strftime("%Y%m%d%H%M%S")
 
 LOOKBEHIND_LINE = "t=t.replace(/(?<!Go to )(?<!जाएँ )\\s+((?:Step|चरण)\\s*[-–]?\\s*[1-9१-९]\\s*[:：\\]\\)])/gi,'\\n$1 ');"
 COMPAT_LINE = "t=t.replace(/\\s+((?:Step|चरण)\\s*[-–]?\\s*[1-9१-९]\\s*[:：\\]\\)])/gi,function(m,p1,offset,str){var before=str.slice(Math.max(0,offset-6),offset);if(/(?:Go to |जाएँ )$/i.test(before))return m;return '\\n'+p1+' ';});"
@@ -87,7 +90,39 @@ def inject_noindex(text: str) -> str:
     return re.sub(r"(<head[^>]*>)", r"\1" + marker, text, count=1, flags=re.I)
 
 
-SAFE_STORAGE_HELPERS = "function azadSafeStorageGet(k){try{return window.localStorage?window.localStorage.getItem(k):null}catch(e){return null}}function azadSafeStorageSet(k,v){try{if(window.localStorage)window.localStorage.setItem(k,v)}catch(e){}}"
+AZAD_WEB_HELPERS = "function azadSafeStorageGet(k){try{return window.localStorage?window.localStorage.getItem(k):null}catch(e){return null}}function azadSafeStorageSet(k,v){try{if(window.localStorage)window.localStorage.setItem(k,v)}catch(e){}}function azadSubmitFromReview(){try{var p=submitQuiz(true);if(p&&typeof p.catch==='function'){p.catch(function(e){showSubmitError(e,'CLIENT_ERROR')})}}catch(e){showSubmitError(e,'CLIENT_ERROR')}}"
+
+
+def validate_embedded_scripts(text: str, label: str) -> None:
+    """Stop publishing if a generated test contains invalid JavaScript."""
+    node = shutil.which("node")
+    if not node:
+        print(f"WARNING: Node.js not found; JavaScript syntax check skipped for {label}")
+        return
+    scripts = re.findall(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", text, re.I | re.S)
+    if not scripts:
+        return
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile("w", suffix=".js", encoding="utf-8", delete=False) as fh:
+            fh.write("\n".join(scripts))
+            temp_path = fh.name
+        result = subprocess.run(
+            [node, "--check", temp_path],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout or "Unknown JavaScript syntax error").strip()
+            raise RuntimeError(f"Generated JavaScript check failed for {label}:\n{detail}")
+    finally:
+        if temp_path:
+            try:
+                Path(temp_path).unlink()
+            except OSError:
+                pass
 
 
 def make_compatible(text: str) -> tuple[str, bool]:
@@ -96,33 +131,31 @@ def make_compatible(text: str) -> tuple[str, bool]:
         text = text.replace(LOOKBEHIND_LINE, COMPAT_LINE)
         patched = True
 
-    # iPhone Safari can throw a SecurityError when storage is unavailable
-    # (private mode / restricted storage). In the original export this happens
-    # before the submit try/catch, so the review closes and the question page
-    # reappears without any message. Use non-fatal wrappers in the web copy.
+    # Safari may deny localStorage in restricted/private contexts. Replace only
+    # direct storage calls; do not rewrite arbitrary text or helper definitions.
     storage_changed = False
-    if "localStorage.getItem(" in text:
-        text = text.replace("localStorage.getItem(", "azadSafeStorageGet(")
-        storage_changed = True
-    if "localStorage.setItem(" in text:
-        text = text.replace("localStorage.setItem(", "azadSafeStorageSet(")
-        storage_changed = True
-    if storage_changed and "function azadSafeStorageGet(" not in text:
-        marker = "async function submitQuiz("
-        if marker in text:
-            text = text.replace(marker, SAFE_STORAGE_HELPERS + marker, 1)
-        else:
-            text = text.replace("</script>", SAFE_STORAGE_HELPERS + "</script>", 1)
-        patched = True
+    if "function azadSafeStorageGet(" not in text:
+        text, n_get = re.subn(r"(?:window\.)?localStorage\.getItem\(", "azadSafeStorageGet(", text)
+        text, n_set = re.subn(r"(?:window\.)?localStorage\.setItem\(", "azadSafeStorageSet(", text)
+        storage_changed = bool(n_get or n_set)
+        patched = patched or storage_changed
 
-    # Do not leave async pre-submit failures silent on Safari. The original
-    # review button closes the modal before calling submitQuiz; if the promise
-    # rejects, the student otherwise lands back on the question screen.
+    # Keep the inline HTML string quote-safe: call a named wrapper instead of
+    # inserting quoted error text inside a single-quoted JavaScript string.
     old_confirm = 'onclick="closeJumpBox();submitQuiz(true)"'
-    new_confirm = 'onclick="closeJumpBox();submitQuiz(true).catch(function(e){showSubmitError(e,\'CLIENT_ERROR\')})"'
+    new_confirm = 'onclick="closeJumpBox();azadSubmitFromReview()"'
+    confirm_changed = False
     if old_confirm in text:
         text = text.replace(old_confirm, new_confirm)
+        confirm_changed = True
         patched = True
+
+    if (storage_changed or confirm_changed) and "function azadSubmitFromReview(" not in text:
+        marker = "async function submitQuiz("
+        if marker in text:
+            text = text.replace(marker, AZAD_WEB_HELPERS + marker, 1)
+        else:
+            text = text.replace("</script>", AZAD_WEB_HELPERS + "</script>", 1)
 
     text = inject_noindex(text)
     return text, patched
@@ -206,6 +239,7 @@ def hero(total: int, date_count: int) -> str:
 
 
 def card_html(item: TestItem, idx: int, href: str) -> str:
+    href = href + ("&" if "?" in href else "?") + "v=" + BUILD_VERSION
     subject = html.escape(item.subject or "Online Test")
     title = html.escape(item.title)
     topic = html.escape(item.topic or "Test खोलकर विवरण देखें।")
@@ -243,6 +277,7 @@ def build() -> int:
         out_dir.mkdir(parents=True, exist_ok=True)
         source_text = item.source.read_text(encoding="utf-8-sig", errors="replace")
         built_text, patched = make_compatible(source_text)
+        validate_embedded_scripts(built_text, item.source.name)
         (out_dir / item.output_name).write_text(built_text, encoding="utf-8")
         manifest.append({
             "date": item.date,
