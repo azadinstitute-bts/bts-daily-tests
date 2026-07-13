@@ -18,7 +18,7 @@ SITE = ROOT / "docs"
 BRAND = "Bilaspur Test Series"
 SUPPORT = "9981957779 | 9669946966"
 WEBSITE = "bilaspurtestseries.com"
-BUILD_VERSION = datetime.now().strftime("%Y%m%d%H%M%S")
+BUILD_VERSION = "schedule-v1"
 
 LOOKBEHIND_LINE = "t=t.replace(/(?<!Go to )(?<!जाएँ )\\s+((?:Step|चरण)\\s*[-–]?\\s*[1-9१-९]\\s*[:：\\]\\)])/gi,'\\n$1 ');"
 COMPAT_LINE = "t=t.replace(/\\s+((?:Step|चरण)\\s*[-–]?\\s*[1-9१-९]\\s*[:：\\]\\)])/gi,function(m,p1,offset,str){var before=str.slice(Math.max(0,offset-6),offset);if(/(?:Go to |जाएँ )$/i.test(before))return m;return '\\n'+p1+' ';});"
@@ -81,6 +81,36 @@ def slugify(value: str) -> str:
     value = re.sub(r"[^a-z0-9]+", "-", value)
     value = value.strip("-")
     return (value[:90].rstrip("-") or "test") + ".html"
+
+
+def manifest_title_key(date_s: str, title: str) -> tuple[str, str]:
+    return str(date_s or "").strip(), str(title or "").casefold().strip()
+
+
+def load_existing_output_names() -> dict[tuple[str, str], str]:
+    """Reuse existing generated filenames so rebuilt pages do not break old shared links."""
+    manifest_path = SITE / "manifest.json"
+    if not manifest_path.exists():
+        return {}
+    try:
+        data = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+    except Exception:
+        return {}
+    out: dict[tuple[str, str], str] = {}
+    if not isinstance(data, list):
+        return out
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        date_s = str(item.get("date") or "").strip()
+        title = str(item.get("title") or "").strip()
+        file_value = str(item.get("file") or "").strip()
+        if not date_s or not title or not file_value:
+            continue
+        name = Path(file_value).name
+        if name:
+            out[manifest_title_key(date_s, title)] = name
+    return out
 
 
 def inject_noindex(text: str) -> str:
@@ -183,6 +213,7 @@ def extract_schedule(*values: str) -> tuple[int | None, int | None, bool]:
 def scan_tests() -> list[TestItem]:
     items: list[TestItem] = []
     used: set[tuple[str, str]] = set()
+    existing_outputs = load_existing_output_names()
     if not UPLOADS.exists():
         return items
     for day_dir in sorted((p for p in UPLOADS.iterdir() if p.is_dir()), reverse=True):
@@ -199,6 +230,9 @@ def scan_tests() -> list[TestItem]:
             title = clean_display_title(test_title)
             week, test_day, weekly_combined = extract_schedule(source.stem, test_title, code)
             base = slugify(code or test_title or source.stem)
+            existing_name = existing_outputs.get(manifest_title_key(day_dir.name, title))
+            if existing_name:
+                base = existing_name
             stem, suffix = Path(base).stem, Path(base).suffix
             output_name = base
             n = 2
