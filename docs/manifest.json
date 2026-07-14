@@ -1,4 +1,26 @@
-﻿[
+[
+  {
+    "date": "2026-07-14",
+    "week": 2,
+    "day": 2,
+    "schedule_label": "Week 2 • Day 2",
+    "title": "Varg 1 English Literary Forms Prose Poetry Drama Figures Week 2 Day 02 21 ENGLISH LITERATURE LITERARY FORMS PR",
+    "subject": "English Literature",
+    "topic": "Drama Dialogue Character Plot, Figures Of Speech And Literary Devices, Literary Forms Prose Fiction Essay, Literary Terms Chronology And Matching, Poetry Forms Imagery Rhythm Rhyme, Prose Comprehension Theme Tone Style",
+    "file": "tests/2026-07-14/varg-1-english-literary-form-english-literature-drama-dialogue-cha-288e4b71.html",
+    "iphone_compat_patch": true
+  },
+  {
+    "date": "2026-07-13",
+    "week": 2,
+    "day": 1,
+    "schedule_label": "Week 2 • Day 1",
+    "title": "Varg 1 English Grammar Noun Pronoun Adjective Adverb Week 2 Day 01 08 ENGLISH GRAMMAR NOUNS CLASSIFICATION C",
+    "subject": "English Grammar",
+    "topic": "Adjectives Kinds Order And Degrees, Adverbs Kinds Position And Comparison, Noun Number Count Noncount Agreement, Nouns Classification Case And Possession, Parts Of Speech Mixed Error Application, Pronouns Types Reference And Agreement",
+    "file": "tests/2026-07-13/varg-1-english-grammar-noun-english-grammar-adjectives-kinds-o-9383d687.html",
+    "iphone_compat_patch": true
+  },
   {
     "date": "2026-07-12",
     "week": 1,
