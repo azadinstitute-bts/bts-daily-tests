@@ -11,6 +11,17 @@
     "iphone_compat_patch": true
   },
   {
+    "date": "2026-07-19",
+    "week": 2,
+    "day": null,
+    "schedule_label": "Week 2 • Weekly Combined",
+    "title": "Varg 1 English Weekly Combined Grammar Vocabulary Prose Poetry Week 2 29 ENGLISH PARTS OF SPEECH GRAMMA",
+    "subject": "English",
+    "topic": "English Poetry Literary Extract Week2, English Prose Passage Week2 Comprehension, Parts Of Speech Grammar, Sentence Structure Error, Vocabulary Word Formation",
+    "file": "tests/2026-07-19/varg-1-english-weekly-combin-english-english-poetry-lit-a7733e22.html",
+    "iphone_compat_patch": true
+  },
+  {
     "date": "2026-07-18",
     "week": 2,
     "day": 6,
@@ -41,17 +52,6 @@
     "subject": "English Grammar",
     "topic": "Advanced Error Finding Usage, Conditional Sentences And Subjunctive, Connectors Conjunctions And Coherence, Phrase Clause Sentence Structure, Question Tags Inversion Emphasis, Sentence Kinds And Functions",
     "file": "tests/2026-07-16/varg-1-english-grammar-phras-english-grammar-advanced-error-fin-f0c59151.html",
-    "iphone_compat_patch": true
-  },
-  {
-    "date": "2026-07-15",
-    "week": 2,
-    "day": 3,
-    "schedule_label": "Week 2 • Day 3",
-    "title": "Varg 1 English Learner Learning And Classroom Dialogue Week 2 Day 03 22 ENGLISH PEDAGOGY LEARNER READINESS PRI",
-    "subject": "English Pedagogy",
-    "topic": "Classroom Dialogue Questioning LSRW, Feedback Remedial Reflection Assessment, Group Learning Peer Activity Language Tasks, Language Learning Process Motivation, Learner Readiness Prior Knowledge In English Class",
-    "file": "tests/2026-07-15/varg-1-english-learner-learn-english-pedagogy-classroom-dialogue-367f5beb.html",
     "iphone_compat_patch": true
   },
   {
