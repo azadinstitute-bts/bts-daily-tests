@@ -1,5 +1,38 @@
 [
   {
+    "date": "2026-07-20",
+    "week": 3,
+    "day": 1,
+    "schedule_label": "Week 3 • Day 1",
+    "title": "Varg 1 English Grammar Tense Voice Narration Week 3 Day 01 08 ENGLISH GRAMMAR TENSE FORMS TIME REFER",
+    "subject": "English Grammar",
+    "topic": "Applied Grammar Objective Practice, Narration Direct Indirect Speech, Tense Forms Time Reference, Tense Voice Narration Error Correction, Voice Active Passive Transformation",
+    "file": "tests/2026-07-20/varg-1-english-grammar-tense-english-grammar-applied-grammar-ob-7206fa14.html",
+    "iphone_compat_patch": true
+  },
+  {
+    "date": "2026-07-18",
+    "week": 2,
+    "day": 6,
+    "schedule_label": "Week 2 • Day 6",
+    "title": "Varg 1 English Common Hindi-English-Computer-GK Week 2 Day 06 23 COMMON COMMON HINDI VYANJAN U",
+    "subject": "Common",
+    "topic": "Common Computer CPU Memory Storage, Common Computer Main Parts Input Output, Common English Gender Exceptions Usage, Common English Gender Rules And Noun Forms, Common GS Duties DPSP Basic Distinction, Common GS Fundamental Rights Articles, Common Hindi Vyanjan Uccharan Aur Prakar, Common Hindi Vyanjan Vargikaran Aur Prayog",
+    "file": "tests/2026-07-18/varg-1-english-common-hindi-common-common-computer-cp-1832a20d.html",
+    "iphone_compat_patch": true
+  },
+  {
+    "date": "2026-07-17",
+    "week": 2,
+    "day": 5,
+    "schedule_label": "Week 2 • Day 5",
+    "title": "W2D5 Varg1 English",
+    "subject": "English Vocabulary",
+    "topic": "Cloze Rearrangement And Usage Practice, Collocations And Fixed Expressions, Idioms Proverbs Advanced Application, Phrasal Verbs Meaning Usage, Synonym Antonym Context Precision, Word Formation Prefix Suffix Root",
+    "file": "tests/2026-07-17/w2d5-varg1-english-english-vocabulary-cloze-rearrangemen-50ea1738.html",
+    "iphone_compat_patch": true
+  },
+  {
     "date": "2026-07-16",
     "week": 2,
     "day": 4,
@@ -19,6 +52,17 @@
     "subject": "English Pedagogy",
     "topic": "Classroom Dialogue Questioning LSRW, Feedback Remedial Reflection Assessment, Group Learning Peer Activity Language Tasks, Language Learning Process Motivation, Learner Readiness Prior Knowledge In English Class",
     "file": "tests/2026-07-15/varg-1-english-learner-learn-english-pedagogy-classroom-dialogue-367f5beb.html",
+    "iphone_compat_patch": true
+  },
+  {
+    "date": "2026-07-15",
+    "week": 2,
+    "day": 3,
+    "schedule_label": "Week 2 • Day 3",
+    "title": "Varg 1 English Learner Learning And Classroom Dialogue Week 2 Day 03 22 ENGLISH PEDAGOGY LEARNER READINESS PRI",
+    "subject": "English Pedagogy",
+    "topic": "Classroom Dialogue Questioning LSRW, Feedback Remedial Reflection Assessment, Group Learning Peer Activity Language Tasks, Language Learning Process Motivation, Learner Readiness Prior Knowledge In English Class",
+    "file": "tests/2026-07-15/varg-1-english-learner-learn-english-pedagogy-classroom-dialogue-367f5beb-2.html",
     "iphone_compat_patch": true
   },
   {
