@@ -1,7 +1,7 @@
 (()=>{"use strict";
 const KEY="bts_web_theme_v1",API="https://mqorslvouzmrvciubpoq.supabase.co/functions/v1/student-api";
 const read=k=>{try{return localStorage.getItem(k)||sessionStorage.getItem(k)||""}catch{return""}};
-const device=mobile=>{let x=read("deviceToken");if(x&&x.length>=24)return x;return("web_"+btoa(mobile||"").replace(/=/g,"")).padEnd(25,"x")};
+const device=mobile=>{const m=String(mobile||read("mobile")||"");if(m&&m.length>=10)return("web_"+btoa(m).replace(/=/g,"")).padEnd(25,"x");let x=read("deviceToken");if(x&&x.length>=24)return x;return("web_"+btoa(m).replace(/=/g,"")).padEnd(25,"x")};
 const post=async(action,body={})=>{const mobile=body.mobile||read("mobile");const r=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,device_token:device(mobile),client_version:"web-6078",app_version_code:6078,client_build:6078,api_contract_version:1,...body})});let j={};try{j=await r.json()}catch{}if(!r.ok||j?.ok!==true)throw new Error(j?.error||"Request failed");return j};
 const apply=mode=>{const m=mode==="dark"?"dark":"light";document.documentElement.dataset.btsTheme=m;document.documentElement.style.colorScheme=m;try{localStorage.setItem(KEY,m)}catch{};document.querySelectorAll("[data-bts-theme-toggle]").forEach(b=>b.textContent=m==="dark"?"☀️ Light Mode":"🌙 Dark Mode")};
 apply(read(KEY)||"light");
@@ -12,20 +12,21 @@ function ensureThemeButton(){
  b.onclick=e=>{e.preventDefault();e.stopPropagation();apply(document.documentElement.dataset.btsTheme==="dark"?"light":"dark")};
  guide.parentNode.insertBefore(b,guide.nextSibling);apply(document.documentElement.dataset.btsTheme||"light")
 }
-let flashKey="";
+let flashKey="",flashPendingKey="";
 async function ensureDemoFlash(){
  if(!location.hash.startsWith("#/")||location.hash.startsWith("#/login"))return;
  const mobile=read("mobile"),token=read("sessionToken");if(!mobile||!token.startsWith("DEMO_FREE_"))return;
- const key=mobile+"|"+token;if(flashKey===key)return;
+ const card=document.querySelector(".overview-card");if(!card)return;
+ const key=mobile+"|"+token;if(flashKey===key||flashPendingKey===key)return;
+ flashPendingKey=key;
  try{
   const data=await post("get_dashboard",{mobile,session_token:token,limit:500}),msg=data?.app_metadata?.demo_flash_message,id=data?.app_metadata?.demo_flash_id;
   if(!msg||!id){flashKey=key;return}
   const seenKey="seen_flash_"+id;if(read(seenKey)==="true"){flashKey=key;return}
-  const card=document.querySelector(".overview-card");if(!card)return;
   try{localStorage.setItem(seenKey,"true")}catch{}
   let el=document.getElementById("bts-demo-policy-flash");if(!el){el=document.createElement("div");el.id="bts-demo-policy-flash";el.className="bts-demo-policy-flash";card.insertAdjacentElement("afterend",el)}
   el.textContent="";const span=document.createElement("span");span.textContent=msg;const close=document.createElement("button");close.type="button";close.className="bts-demo-flash-close";close.textContent="DISMISS";close.onclick=()=>el.remove();el.append(span,close);flashKey=key
- }catch{}
+ }catch{}finally{if(flashPendingKey===key)flashPendingKey=""}
 }
 function ensureLoginSupport(){
  if(!location.hash.startsWith("#/login")){document.querySelector("[data-bts-login-support]")?.remove();return}
@@ -63,6 +64,6 @@ function ensureAttemptButton(){
 }
 const tick=()=>{ensureThemeButton();ensureLoginSupport();ensureDemoFlash();ensureAttemptButton()};
 new MutationObserver(tick).observe(document.documentElement,{subtree:true,childList:true});
-window.addEventListener("hashchange",()=>{flashKey="";closeAttemptModal();setTimeout(tick,50)});
+window.addEventListener("hashchange",()=>{flashKey="";flashPendingKey="";closeAttemptModal();setTimeout(tick,50)});
 setTimeout(tick,50);
 })();
