@@ -33,8 +33,13 @@ jobs:
           python3 -m http.server 4173 --directory /tmp/bts-site >/tmp/bts-http.log 2>&1 &
           SERVER_PID=$!
           trap 'kill $SERVER_PID || true' EXIT
-          for i in {1..20}; do curl -fsS http://127.0.0.1:4173/bts-daily-tests/ >/dev/null && break; sleep 0.25; done
-          cat > /tmp/smoke.mjs <<'JS'
+          ready=0
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:4173/bts-daily-tests/ >/dev/null; then ready=1; break; fi
+            sleep 0.25
+          done
+          test "$ready" = 1
+          cat > "$GITHUB_WORKSPACE/.parity-smoke.mjs" <<'JS'
           import { chromium } from 'playwright-core';
           import assert from 'node:assert/strict';
 
@@ -150,7 +155,7 @@ jobs:
           console.log('SMOKE_PASS: branch runtime + mocked API integration');
           console.log(JSON.stringify({calls:calls.map(({mode,action,client_build,app_version_code,client_version,api_contract_version,limit})=>({mode,action,client_build,app_version_code,client_version,api_contract_version,limit}))},null,2));
           JS
-          CHROME_PATH="$CHROME" node /tmp/smoke.mjs
+          CHROME_PATH="$CHROME" node "$GITHUB_WORKSPACE/.parity-smoke.mjs"
           grep -q 'report_question' assets/index-D6L0VNZw.js
           grep -q 'upgrade_demo_session' assets/index-D6L0VNZw.js
           grep -q 'client_build:6078' assets/index-D6L0VNZw.js
