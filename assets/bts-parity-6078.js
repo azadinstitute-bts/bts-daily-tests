@@ -25,6 +25,13 @@ async function ensureDemoFlash(){
   el.textContent=msg;flashKey=key
  }catch{}
 }
+function ensureLoginSupport(){
+ if(!location.hash.startsWith("#/login")){document.querySelector("[data-bts-login-support]")?.remove();return}
+ if(document.querySelector("[data-bts-login-support]"))return;
+ const login=[...document.querySelectorAll("button")].find(b=>(b.textContent||"").trim()==="Login Securely");if(!login)return;
+ const b=document.createElement("button");b.type="button";b.dataset.btsLoginSupport="1";b.className="btn btn-outline";b.style.width="100%";b.style.marginTop=".65rem";b.textContent="Call Support • 9669946966";b.onclick=()=>{location.href="tel:+919669946966"};
+ login.insertAdjacentElement("afterend",b)
+}
 function closeAttemptModal(){document.getElementById("bts-attempt-modal")?.remove()}
 async function openAttemptHistory(testCode){
  closeAttemptModal();
@@ -52,7 +59,7 @@ function ensureAttemptButton(){
  b.onclick=e=>{e.preventDefault();e.stopPropagation();openAttemptHistory(decodeURIComponent(m[1]))};
  header.appendChild(b)
 }
-const tick=()=>{ensureThemeButton();ensureDemoFlash();ensureAttemptButton()};
+const tick=()=>{ensureThemeButton();ensureLoginSupport();ensureDemoFlash();ensureAttemptButton()};
 new MutationObserver(tick).observe(document.documentElement,{subtree:true,childList:true});
 window.addEventListener("hashchange",()=>{flashKey="";closeAttemptModal();setTimeout(tick,50)});
 setTimeout(tick,50);
