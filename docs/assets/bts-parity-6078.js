@@ -16,13 +16,15 @@ let flashKey="";
 async function ensureDemoFlash(){
  if(!location.hash.startsWith("#/")||location.hash.startsWith("#/login"))return;
  const mobile=read("mobile"),token=read("sessionToken");if(!mobile||!token.startsWith("DEMO_FREE_"))return;
- const key=mobile+"|"+token;if(flashKey===key&&document.getElementById("bts-demo-policy-flash"))return;
+ const key=mobile+"|"+token;if(flashKey===key)return;
  try{
-  const data=await post("get_dashboard",{mobile,session_token:token,limit:500});
-  const msg=data?.app_metadata?.demo_flash_message;if(!msg)return;
+  const data=await post("get_dashboard",{mobile,session_token:token,limit:500}),msg=data?.app_metadata?.demo_flash_message,id=data?.app_metadata?.demo_flash_id;
+  if(!msg||!id){flashKey=key;return}
+  const seenKey="seen_flash_"+id;if(read(seenKey)==="true"){flashKey=key;return}
   const card=document.querySelector(".overview-card");if(!card)return;
+  try{localStorage.setItem(seenKey,"true")}catch{}
   let el=document.getElementById("bts-demo-policy-flash");if(!el){el=document.createElement("div");el.id="bts-demo-policy-flash";el.className="bts-demo-policy-flash";card.insertAdjacentElement("afterend",el)}
-  el.textContent=msg;flashKey=key
+  el.textContent="";const span=document.createElement("span");span.textContent=msg;const close=document.createElement("button");close.type="button";close.className="bts-demo-flash-close";close.textContent="DISMISS";close.onclick=()=>el.remove();el.append(span,close);flashKey=key
  }catch{}
 }
 function ensureLoginSupport(){
