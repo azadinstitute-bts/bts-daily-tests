@@ -39,6 +39,12 @@ jobs:
             sleep 0.25
           done
           test "$ready" = 1
+          echo "INDEX_STATUS"
+          curl -fsSI http://127.0.0.1:4173/bts-daily-tests/ | head -n 5
+          echo "MODERN_BUNDLE_STATUS"
+          curl -fsSI http://127.0.0.1:4173/bts-daily-tests/assets/index-D6L0VNZw.js | head -n 5
+          echo "PARITY_HELPER_STATUS"
+          curl -fsSI http://127.0.0.1:4173/bts-daily-tests/assets/bts-parity-6078.js | head -n 5
           cat > "$GITHUB_WORKSPACE/.parity-smoke.mjs" <<'JS'
           import { chromium } from 'playwright-core';
           import assert from 'node:assert/strict';
@@ -85,10 +91,18 @@ jobs:
           const errs=[];
           const demoCtx = await browser.newContext();
           const page = await demoCtx.newPage();
-          page.on('pageerror',e=>errs.push(String(e)));
+          const diagnostics=[];
+          page.on('console',m=>diagnostics.push('console '+m.type()+': '+m.text()));
+          page.on('pageerror',e=>{errs.push(String(e));diagnostics.push('pageerror: '+String(e))});
+          page.on('requestfailed',r=>diagnostics.push('requestfailed '+r.url()+': '+(r.failure()?.errorText||'')));
+          page.on('response',r=>{if(r.status()>=400) diagnostics.push('http '+r.status()+' '+r.url())});
           await mockApi(page,'demo');
-          await page.goto('http://127.0.0.1:4173/bts-daily-tests/#/login',{waitUntil:'domcontentloaded'});
-          await page.getByText('BTS Portal').waitFor();
+          const nav=await page.goto('http://127.0.0.1:4173/bts-daily-tests/#/login',{waitUntil:'domcontentloaded'});
+          await page.waitForTimeout(1500);
+          console.log('NAV_STATUS',nav?.status(),'URL',page.url());
+          console.log('BODY_PREVIEW',(await page.locator('body').innerText()).slice(0,1200));
+          console.log('DIAGNOSTICS',JSON.stringify(diagnostics,null,2));
+          await page.getByText('BTS Portal').waitFor({timeout:5000});
           await page.getByText('Call Support • 9669946966').waitFor();
           await page.getByRole('button',{name:'Free Demo'}).click();
           const demoSelect = page.locator('select').first();
