@@ -72,17 +72,61 @@ PASS:
 - enabled mappings outside Week 7: 0
 - no backend mutation was performed during this web parity pass
 
-## Deployment gate
-Do not merge to main until a focused browser smoke covers:
-- paid login
-- free demo login
-- Varg 2 Hindi/English demo selector
-- demo available + premium ordering
-- one official attempt + one practice re-attempt
-- practice result + attempt history
-- question report
-- dark/light toggle
-- Call Support
-- Varg 2 Hindi paid filtering if a suitable account is available
+## Runtime browser smoke
+PASS — non-destructive Chromium integration smoke on the compiled parity branch.
 
-This checkpoint intentionally keeps live production unchanged until runtime smoke is accepted.
+Evidence:
+- GitHub Actions run: #10 / run id 35471922674
+- Tested commit: 0db49c15528a0645a5e164726a6bb102e0598e2a
+- Result markers: `SMOKE_PASS: branch runtime + mocked API integration` and `STATIC_WIRING_PASS`
+- Browser console/page diagnostics: no application errors during the passing run
+- The smoke mocked student-api responses, so it did not create sessions, attempts, results, or question reports in production.
+
+Covered:
+- first-run Privacy & Data Disclosure consent
+- paid login flow
+- Free Demo login flow
+- Varg 2 Hindi and Varg 2 English demo selector options
+- demo available + premium card rendering and ordering
+- web-6078 metadata on student-api requests
+- dashboard limit 500
+- dashboard Call Support
+- dark -> light mode
+- paid Varg 2 Hindi filtering using production-shaped entitlement/test data
+- Attempt History: 2/7 used, Official first attempt, Practice second attempt
+- practice-attempt result routing with `attempt_id`
+- helper dark/light toggle and login Call Support
+- static wiring for `report_question`, `upgrade_demo_session`, and build 6078
+
+## Production contract read-only verification
+PASS — current student-api v145 source and current production data shapes were inspected without writes.
+
+Client/backend contract:
+- All 10 student-api actions called by the parity bundle/helper are routed by v145: `verify_session`, `upgrade_demo_session`, `get_dashboard`, `get_demo_courses`, `get_test_public`, `submit_native_result`, `get_attempt_history`, `get_result_detail`, `get_leaderboard`, `report_question`.
+- `get_test_public` is the attempt start/resume authority and returns the attempt token/timestamps used by the web client.
+- `submit_native_result` requires the same `attempt_token`, `submission_id`, `test_code`, and answers sent by the web client.
+- v145 marks attempt 1 as official/ranked and later attempts as practice while preserving the official rank.
+- `get_attempt_history` returns the fields consumed by the helper: max/used/remaining plus attempt id/number, official flag, score/total and submitted time.
+- `get_result_detail` accepts `attempt_id` and binds it to the logged-in mobile + test before returning a practice result.
+- `report_question` validates session/access or the attempt token and creates the protected backend snapshot/report ID; the client does not submit its own question snapshot.
+- build 6078 uses the backend timer rule of 6/5 minute per question (50Q = 60 minutes, 100Q = 120 minutes).
+
+Production mapping shape:
+- Active Varg 2 Hindi entitlements use canonical `course_id=varg2_hindi`.
+- Week-7 Hindi tests use `Teacher - Hindi` / `Varg 2 Hindi`; Week-7 English tests use `Teacher - English` / `Varg 2 English`.
+- An earlier smoke failure using a generic `course=Teacher` entitlement was classified as an unrealistic test-harness shape, not an application defect; the production-shaped rerun passed.
+
+## Remaining limitation
+A live production submit/report mutation was intentionally not executed. That would create or alter real student/session/attempt/result/report data, and Free Demo validation itself can create a demo student row. With the compiled-browser smoke plus source-level v145 contract verification passing, a synthetic production write would add comparatively little information while increasing production-data risk.
+
+## Deployment gate
+Focused/offline/runtime evidence is now sufficient for a controlled deployment gate:
+- static bundle validation: PASS
+- root/docs parity: PASS
+- production configuration/mapping read-only sanity: PASS
+- compiled Chromium integration smoke: PASS
+- student-api v145 action/payload/response contract alignment: PASS
+- live production mutating submit/report proof: NOT RUN by design
+
+After merge, verify the live site read-only first (asset/version load, login screen, demo selector availability, theme/support controls). Any real account attempt/submit should be treated as normal production usage, not synthetic test data.
+
