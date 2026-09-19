@@ -1,0 +1,351 @@
+name: Temporary Web Parity Smoke
+
+on:
+  push:
+    branches:
+      - web-parity-6078-20260920
+    paths:
+      - .github/workflows/web-parity-smoke.yml
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: web-parity-6078-20260920
+
+      - name: Verify branch artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f index.html
+          test -f assets/index-D6L0VNZw.js
+          test -f assets/bts-parity-6078.js
+          test -f assets/bts-parity-6078.css
+          cmp -s index.html docs/index.html
+          cmp -s assets/index-D6L0VNZw.js docs/assets/index-D6L0VNZw.js
+          cmp -s assets/bts-parity-6078.js docs/assets/bts-parity-6078.js
+          cmp -s assets/bts-parity-6078.css docs/assets/bts-parity-6078.css
+
+      - name: Install browser harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+
+      - name: Create isolated helper fixture
+        shell: bash
+        run: |
+          cat > smoke-fixture.html <<'HTML'
+          <!doctype html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <link rel="stylesheet" href="/bts-daily-tests/assets/index-wuAJsdPM.css">
+            <link rel="stylesheet" href="/bts-daily-tests/assets/bts-parity-6078.css">
+          </head>
+          <body>
+            <header></header>
+            <main>
+              <button type="button">User Guide</button>
+            </main>
+            <script type="module" src="/bts-daily-tests/assets/bts-parity-6078.js"></script>
+          </body>
+          </html>
+          HTML
+
+      - name: Browser smoke
+        shell: bash
+        env:
+          CI: "true"
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --bind 127.0.0.1 --directory "$(dirname "$GITHUB_WORKSPACE")" >/tmp/bts-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:4173/bts-daily-tests/ >/dev/null; then break; fi
+            sleep 0.25
+          done
+
+          cat > /tmp/web-parity-smoke.mjs <<'NODE'
+          import assert from 'node:assert/strict';
+          import { chromium } from 'playwright';
+
+          const API = 'https://mqorslvouzmrvciubpoq.supabase.co/functions/v1/student-api';
+          const BASE = 'http://127.0.0.1:4173/bts-daily-tests/';
+
+          const realBody = {
+            action: 'get_demo_courses',
+            device_token: 'web_smoke_6078_abcdefghijklmnop',
+            client_version: 'web-6078',
+            app_version_code: 6078,
+            client_build: 6078,
+            api_contract_version: 1
+          };
+          const realResp = await fetch(API, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(realBody)
+          });
+          const realJson = await realResp.json();
+          assert.equal(realResp.ok, true, 'real get_demo_courses HTTP failed');
+          assert.equal(realJson.ok, true, 'real get_demo_courses API failed');
+          assert.ok(Array.isArray(realJson.courses) && realJson.courses.length >= 10, 'demo courses unexpectedly small');
+          const realCourses = realJson.courses.map(x => String(x).toLowerCase());
+          assert.ok(realCourses.some(x => x.includes('varg 2') && x.includes('hindi')), 'real Varg 2 Hindi demo course missing');
+          assert.ok(realCourses.some(x => x.includes('varg 2') && x.includes('english')), 'real Varg 2 English demo course missing');
+          console.log('PASS real backend read-only demo catalog:', realJson.courses.length, 'courses');
+
+          const browser = await chromium.launch({headless:true});
+          const context = await browser.newContext();
+          const page = await context.newPage();
+          const pageErrors = [];
+          const consoleErrors = [];
+          const apiBodies = [];
+          page.on('pageerror', e => pageErrors.push(String(e)));
+          page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+
+          await context.route('**/student-api', async route => {
+            let body = {};
+            try { body = route.request().postDataJSON() || {}; } catch {}
+            apiBodies.push(body);
+            const action = body.action;
+            const now = Date.now();
+            const json = {ok:true};
+            if (action === 'get_demo_courses') {
+              json.courses = ['Varg 1 Hindi','Varg 2 Hindi','Varg 2 English','Varg 2 Mathematics','Varg 3 Assistant Teacher','CTET Paper 1','CTET Paper 2 Maths-Science'];
+            } else if (action === 'upgrade_demo_session') {
+              json.upgraded = false;
+            } else if (action === 'verify_session') {
+              json.student = {name:'Smoke Student', mobile:'9000006078'};
+            } else if (action === 'get_dashboard') {
+              json.student = {name:'Smoke Student', mobile:'9000006078'};
+              json.entitlements = [];
+              json.latest_tests = [
+                {
+                  test_code:'SMOKE_AVAILABLE',
+                  cleanTitle:'Smoke Available Test',
+                  test_title:'Smoke Available Test',
+                  status:'available',
+                  week_number:7,
+                  subject:'Mathematics',
+                  humanTopics:'A very long topic title that must remain readable instead of being ellipsized on the card',
+                  scheduled_at:new Date(now - 3600000).toISOString()
+                },
+                {
+                  test_code:'SMOKE_DONE',
+                  cleanTitle:'Smoke Completed Test',
+                  test_title:'Smoke Completed Test',
+                  status:'attempted',
+                  week_number:7,
+                  subject:'Mathematics',
+                  humanTopics:'Completed topic',
+                  can_reattempt:true,
+                  attempts_used:2,
+                  attempts_remaining:5,
+                  max_attempts:7,
+                  scheduled_at:new Date(now - 7200000).toISOString()
+                },
+                {
+                  test_code:'SMOKE_PREMIUM',
+                  cleanTitle:'Smoke Premium Test',
+                  test_title:'Smoke Premium Test',
+                  status:'premium',
+                  week_number:7,
+                  subject:'Mathematics',
+                  humanTopics:'Premium topic',
+                  scheduled_at:new Date(now + 3600000).toISOString()
+                }
+              ];
+              json.attempted_tests = [
+                {
+                  test_code:'SMOKE_DONE',
+                  score:8,
+                  total:10,
+                  max_score:10,
+                  rank:3,
+                  can_reattempt:true,
+                  attempts_used:2,
+                  attempts_remaining:5,
+                  max_attempts:7
+                }
+              ];
+              json.app_metadata = {
+                demo_flash_message:'SMOKE DEMO POLICY',
+                demo_flash_id:'smoke-policy-6078'
+              };
+            } else if (action === 'get_attempt_history') {
+              json.attempts_used = 2;
+              json.max_attempts = 7;
+              json.attempts_remaining = 5;
+              json.attempts = [
+                {attempt_number:1,is_official_attempt:true,score:8,total:10,attempt_id:'OFFICIAL-1',submitted_at:new Date(now-7200000).toISOString()},
+                {attempt_number:2,is_official_attempt:false,score:9,total:10,attempt_id:'PRACTICE-2',submitted_at:new Date(now-3600000).toISOString()}
+              ];
+            } else if (action === 'get_test_public') {
+              json.attempt = {
+                attempt_token: body.attempt_token || 'ATTEMPT-SMOKE',
+                started_at: new Date(now).toISOString(),
+                expires_at: new Date(now + 3600000).toISOString()
+              };
+              json.test = {test_code:'SMOKE_AVAILABLE',title:'Smoke Test',duration_minutes:60};
+              json.content_version = 'smoke-v1';
+              json.questions = [
+                {
+                  qno:1,
+                  question:'2 + 2 = ?',
+                  question_text:'2 + 2 = ?',
+                  options:['3','4','5','6'],
+                  metadata:{}
+                }
+              ];
+              json.passages = [];
+            } else if (action === 'report_question') {
+              json.report_id = 'SMOKE-REPORT-1';
+              json.support_message = 'SMOKE REPORT';
+            } else if (action === 'submit_native_result') {
+              json.attempt_id = 'PRACTICE-2';
+              json.attempt_number = 2;
+              json.is_official_attempt = false;
+              json.score = 1;
+              json.total = 1;
+            } else if (action === 'get_result_detail') {
+              json.test = {test_code:'SMOKE_AVAILABLE',title:'Smoke Test'};
+              json.result = {
+                attempt_id: body.attempt_id || 'PRACTICE-2',
+                attempt_number:2,
+                is_official_attempt:false,
+                score:1,
+                total:1,
+                max_score:1,
+                time_taken_seconds:12
+              };
+              json.questions = [
+                {
+                  qno:1,
+                  question:'2 + 2 = ?',
+                  question_text:'2 + 2 = ?',
+                  options:['3','4','5','6'],
+                  correct_option_index:1,
+                  selected_index:1,
+                  attempted:true,
+                  is_correct:true,
+                  explanation:'2 + 2 equals 4.',
+                  metadata:{}
+                }
+              ];
+              json.passages = [];
+            } else if (action === 'get_leaderboard') {
+              json.entries = [];
+              json.leaderboard = [];
+            }
+            await route.fulfill({
+              status:200,
+              contentType:'application/json',
+              body:JSON.stringify(json)
+            });
+          });
+
+          await page.goto(BASE + '#/login', {waitUntil:'domcontentloaded'});
+          await page.getByRole('heading', {name:'BTS Portal'}).waitFor();
+          await page.getByRole('button', {name:'Free Demo'}).click();
+          const courseSelect = page.getByLabel('Select Demo Course');
+          await courseSelect.waitFor();
+          const options = await courseSelect.locator('option').allTextContents();
+          assert.ok(options.some(x => /varg 2 hindi/i.test(x)), 'browser Varg 2 Hindi option missing');
+          assert.ok(options.some(x => /varg 2 english/i.test(x)), 'browser Varg 2 English option missing');
+          await page.getByLabel('Full Name').fill('Smoke Student');
+          await page.getByLabel('Mobile Number').fill('9000006078');
+          await courseSelect.selectOption({label:'Varg 2 Hindi'});
+          await page.getByRole('button', {name:'Start Free Demo'}).click();
+
+          await page.getByText('Welcome Back,').waitFor();
+          await page.getByText('Upcoming Tests', {exact:true}).waitFor();
+          await page.getByText('Smoke Available Test').waitFor();
+          await page.getByText('Smoke Premium Test').waitFor();
+          await page.getByText('Premium', {exact:true}).waitFor();
+          await page.getByText(/Re-attempt \(5\)/).waitFor();
+          await page.getByText('SMOKE DEMO POLICY', {exact:true}).waitFor();
+
+          const bodyText = await page.locator('body').innerText();
+          assert.ok(bodyText.indexOf('Smoke Available Test') < bodyText.indexOf('Smoke Premium Test'), 'available/premium ordering changed unexpectedly');
+
+          const menu = page.locator('button[title="Menu"]');
+          await menu.click();
+          await page.getByRole('button', {name:/User Guide/}).waitFor();
+          await page.getByRole('button', {name:/Call Support/}).waitFor();
+          const theme = page.locator('[data-bts-theme-toggle]');
+          await theme.waitFor();
+          await theme.click();
+          assert.equal(await page.evaluate(() => document.documentElement.dataset.btsTheme), 'dark', 'dark theme did not apply');
+          await theme.click();
+          assert.equal(await page.evaluate(() => document.documentElement.dataset.btsTheme), 'light', 'light theme did not restore');
+
+          const relevant = apiBodies.filter(x => ['get_demo_courses','verify_session','get_dashboard'].includes(x.action));
+          assert.ok(relevant.length >= 3, 'expected API calls were not made');
+          for (const x of relevant) {
+            assert.equal(x.app_version_code, 6078, x.action + ' missing app_version_code 6078');
+            assert.equal(x.client_build, 6078, x.action + ' missing client_build 6078');
+            assert.equal(x.api_contract_version, 1, x.action + ' missing api_contract_version 1');
+          }
+          const dashboardCalls = apiBodies.filter(x => x.action === 'get_dashboard');
+          assert.ok(dashboardCalls.some(x => x.limit === 500), 'dashboard limit 500 missing');
+
+          await page.goto(BASE + '#/test/SMOKE_AVAILABLE', {waitUntil:'domcontentloaded'});
+          await page.getByText('Q1', {exact:true}).waitFor();
+          const reportButton = page.getByRole('button', {name:/Report/});
+          await reportButton.waitFor();
+          const popupPromise = page.waitForEvent('popup').catch(() => null);
+          await reportButton.click();
+          await page.waitForTimeout(250);
+          const reportCall = apiBodies.find(x => x.action === 'report_question');
+          assert.ok(reportCall, 'protected report_question API was not called');
+          assert.equal(reportCall.test_code, 'SMOKE_AVAILABLE');
+          assert.equal(reportCall.qno, 1);
+          assert.equal(reportCall.client_version, 'web-6078');
+          const popup = await popupPromise;
+          if (popup) await popup.close().catch(() => {});
+
+          await page.getByRole('button', {name:/Finish & Submit/}).click();
+          await page.getByRole('button', {name:'Submit Now'}).waitFor();
+          await page.getByRole('button', {name:'Submit Now'}).click();
+          await page.waitForURL(/#\/result\/SMOKE_AVAILABLE\?attempt_id=PRACTICE-2/);
+          const submitCall = apiBodies.find(x => x.action === 'submit_native_result');
+          assert.ok(submitCall, 'submit_native_result was not called');
+          assert.ok(Array.isArray(submitCall.answers), 'submission answers payload missing');
+          assert.match(page.url(), /attempt_id=PRACTICE-2/, 'practice result did not preserve attempt_id');
+
+          const fixture = await context.newPage();
+          await fixture.addInitScript(() => {
+            localStorage.setItem('mobile','9000006078');
+            localStorage.setItem('sessionToken','PAID_SMOKE_SESSION');
+          });
+          await fixture.goto(BASE + 'smoke-fixture.html#/result/SMOKE_DONE', {waitUntil:'domcontentloaded'});
+          const attemptsButton = fixture.locator('[data-bts-attempt-history]');
+          await attemptsButton.waitFor();
+          await attemptsButton.click();
+          await fixture.getByText('Attempt History', {exact:true}).waitFor();
+          await fixture.getByText(/Attempt 1 .* Official .* Score 8\/10/).waitFor();
+          await fixture.getByText(/Attempt 2 .* Practice .* Score 9\/10/).waitFor();
+          const helperTheme = fixture.locator('[data-bts-theme-toggle]');
+          await helperTheme.waitFor();
+          await helperTheme.click();
+          assert.equal(await fixture.evaluate(() => document.documentElement.dataset.btsTheme), 'dark');
+
+          await browser.close();
+
+          assert.equal(pageErrors.length, 0, 'page errors: ' + pageErrors.join(' | '));
+          const criticalConsole = consoleErrors.filter(x => !/favicon|Failed to load resource.*wa\.me/i.test(x));
+          assert.equal(criticalConsole.length, 0, 'console errors: ' + criticalConsole.join(' | '));
+
+          console.log('PASS mocked browser parity smoke');
+          console.log('PASS metadata + demo catalog + premium ordering + reattempt + protected report + practice attempt_id + history + theme + support');
+          NODE
+
+          node /tmp/web-parity-smoke.mjs
