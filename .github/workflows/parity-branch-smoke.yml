@@ -166,13 +166,19 @@ jobs:
           await helper.addInitScript(()=>{localStorage.setItem('mobile','9999999999');localStorage.setItem('sessionToken','DEMO_FREE_9999999999_Varg 2 Hindi_Smoke')});
           await mockApi(helper,'demo');
           await helper.goto('http://127.0.0.1:4173/helper-test.html#/result/SMK-HI-A',{waitUntil:'domcontentloaded'});
+          await helper.getByRole('button',{name:/Dark Mode|Light Mode/}).click();
+          assert.equal(await helper.evaluate(()=>document.documentElement.dataset.btsTheme),'dark','helper theme failed');
+          await helper.getByRole('button',{name:/Dark Mode|Light Mode/}).click();
+          assert.equal(await helper.evaluate(()=>document.documentElement.dataset.btsTheme),'light','helper theme restore failed');
           await helper.getByRole('button',{name:'↻ Attempts'}).waitFor();
           await helper.getByRole('button',{name:'↻ Attempts'}).click();
           await helper.getByText('2/7 attempts used • 5 remaining').waitFor();
           await helper.getByText('Attempt 1 • Official • Score 40/50').waitFor();
-          await helper.getByText('Attempt 2 • Practice • Score 44/50').waitFor();
-          await helper.getByRole('button',{name:/Dark Mode|Light Mode/}).click();
-          assert.equal(await helper.evaluate(()=>document.documentElement.dataset.btsTheme),'dark','helper theme failed');
+          const practiceRow=helper.locator('.bts-attempt-row').filter({hasText:'Attempt 2 • Practice • Score 44/50'});
+          await practiceRow.waitFor();
+          await practiceRow.click();
+          await helper.waitForURL(url=>url.hash.includes('attempt_id=a2'),{timeout:5000});
+          assert((await helper.evaluate(()=>location.hash)).includes('attempt_id=a2'),'practice attempt id was not routed');
           await helper.evaluate(()=>{location.hash='#/login'});
           await helper.getByText('Call Support • 9669946966').waitFor();
 
