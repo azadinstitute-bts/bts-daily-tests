@@ -102,6 +102,8 @@ jobs:
           console.log('NAV_STATUS',nav?.status(),'URL',page.url());
           console.log('BODY_PREVIEW',(await page.locator('body').innerText()).slice(0,1200));
           console.log('DIAGNOSTICS',JSON.stringify(diagnostics,null,2));
+          const consent=page.getByText(/I Agree & Continue/);
+          if(await consent.count()) await consent.first().click();
           await page.getByText('BTS Portal').waitFor({timeout:5000});
           await page.getByText('Call Support • 9669946966').waitFor();
           await page.getByRole('button',{name:'Free Demo'}).click();
@@ -138,6 +140,8 @@ jobs:
           const paid = await paidCtx.newPage();
           await mockApi(paid,'paid');
           await paid.goto('http://127.0.0.1:4173/bts-daily-tests/#/login',{waitUntil:'domcontentloaded'});
+          const paidConsent=paid.getByText(/I Agree & Continue/);
+          if(await paidConsent.count()) await paidConsent.first().click();
           await paid.getByPlaceholder('e.g. 9876543210').fill('8888888888');
           await paid.getByPlaceholder('Enter your access code').fill('SMOKE_ACCESS');
           await paid.getByRole('button',{name:'Login Securely'}).click();
