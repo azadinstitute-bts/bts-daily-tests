@@ -1,0 +1,157 @@
+name: BTS parity branch smoke
+on:
+  push:
+    branches: [web-parity-6078-20260920]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install browser driver
+        run: npm install --no-save playwright-core
+      - name: Run non-destructive browser smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          test -n "$CHROME"
+          mkdir -p /tmp/bts-site
+          ln -s "$GITHUB_WORKSPACE" /tmp/bts-site/bts-daily-tests
+          cat > /tmp/bts-site/helper-test.html <<'HTML'
+          <!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="/bts-daily-tests/assets/bts-parity-6078.css"></head><body>
+          <header></header><main><div class="overview-card">Overview</div><button>User Guide</button><button>Login Securely</button></main>
+          <script type="module" src="/bts-daily-tests/assets/bts-parity-6078.js"></script>
+          </body></html>
+          HTML
+          python3 -m http.server 4173 --directory /tmp/bts-site >/tmp/bts-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          for i in {1..20}; do curl -fsS http://127.0.0.1:4173/bts-daily-tests/ >/dev/null && break; sleep 0.25; done
+          cat > /tmp/smoke.mjs <<'JS'
+          import { chromium } from 'playwright-core';
+          import assert from 'node:assert/strict';
+
+          const executablePath = process.env.CHROME_PATH;
+          const browser = await chromium.launch({headless:true, executablePath, args:['--no-sandbox']});
+          const apiUrl = 'https://mqorslvouzmrvciubpoq.supabase.co/functions/v1/student-api';
+          const calls = [];
+          const json = (route, body) => route.fulfill({status:200, contentType:'application/json', body:JSON.stringify(body)});
+          const mkTest = (code,title,subject,status='available') => ({
+            test_code:code,test_title:title,subject,topic:subject+' topic',post:'Varg 2',course:'Teacher',exam:'Varg 2',
+            week_number:7,day_number:1,status,scheduled_at:'2026-09-20T10:00:00+05:30',updated_at:'2026-09-20T00:00:00Z'
+          });
+          async function mockApi(page, mode='demo') {
+            await page.route(apiUrl, async route => {
+              const req = route.request();
+              let body={}; try{body=JSON.parse(req.postData()||'{}')}catch{}
+              calls.push({mode,...body});
+              switch(body.action){
+                case 'get_demo_courses': return json(route,{ok:true,courses:['Varg 2 Hindi','Varg 2 English','CTET Paper 1']});
+                case 'upgrade_demo_session': return json(route,{ok:true,upgraded:false});
+                case 'verify_session': return json(route,{ok:true,student:{name: mode==='demo'?'Demo Smoke':'Paid Smoke',mobile:body.mobile||'9999999999'}});
+                case 'get_dashboard': return json(route,{ok:true,
+                  student:{name: mode==='demo'?'Demo Smoke':'Paid Smoke',mobile:body.mobile||'9999999999'},
+                  entitlements:[{course:'Teacher',post:'Varg 2',subject:'Hindi',displayName:'Varg 2 Hindi'}],
+                  latest_tests: mode==='demo' ? [
+                    mkTest('SMK-HI-A','SMOKE AVAILABLE HINDI','Hindi','available'),
+                    mkTest('SMK-EN-P','SMOKE PREMIUM ENGLISH','English','premium')
+                  ] : [
+                    mkTest('SMK-HI-A','SMOKE PAID HINDI','Hindi','available'),
+                    mkTest('SMK-EN-A','SMOKE PAID ENGLISH','English','available')
+                  ],
+                  attempted_tests:[],
+                  app_metadata:{demo_flash_message:'Demo policy smoke',demo_flash_id:'smoke-6078'}
+                });
+                case 'get_attempt_history': return json(route,{ok:true,attempts_used:2,max_attempts:7,attempts_remaining:5,attempts:[
+                  {attempt_id:'a1',attempt_number:1,is_official_attempt:true,score:40,total:50,submitted_at:'2026-09-20T10:00:00Z'},
+                  {attempt_id:'a2',attempt_number:2,is_official_attempt:false,score:44,total:50,submitted_at:'2026-09-20T11:00:00Z'}
+                ]});
+                default: return json(route,{ok:true});
+              }
+            });
+          }
+          const errs=[];
+          const demoCtx = await browser.newContext();
+          const page = await demoCtx.newPage();
+          page.on('pageerror',e=>errs.push(String(e)));
+          await mockApi(page,'demo');
+          await page.goto('http://127.0.0.1:4173/bts-daily-tests/#/login',{waitUntil:'domcontentloaded'});
+          await page.getByText('BTS Portal').waitFor();
+          await page.getByText('Call Support • 9669946966').waitFor();
+          await page.getByRole('button',{name:'Free Demo'}).click();
+          const demoSelect = page.locator('select').first();
+          await demoSelect.waitFor();
+          const options = await demoSelect.locator('option').allTextContents();
+          assert(options.includes('Varg 2 Hindi'),'Varg 2 Hindi demo option missing');
+          assert(options.includes('Varg 2 English'),'Varg 2 English demo option missing');
+          await page.getByPlaceholder('Your Name').fill('Smoke User');
+          await page.getByPlaceholder('e.g. 9876543210').fill('9999999999');
+          await demoSelect.selectOption({label:'Varg 2 Hindi'});
+          await page.getByRole('button',{name:'Start Free Demo'}).click();
+          await page.getByText('My Tests').waitFor({timeout:10000});
+          await page.getByText('Demo policy smoke').waitFor();
+          const demoText = await page.locator('body').innerText();
+          assert(demoText.includes('SMOKE AVAILABLE HINDI'),'available demo card missing');
+          assert(demoText.includes('SMOKE PREMIUM ENGLISH'),'premium demo card missing');
+          assert(demoText.indexOf('SMOKE AVAILABLE HINDI') < demoText.indexOf('SMOKE PREMIUM ENGLISH'),'premium ordering wrong');
+          const demoDash = calls.find(c=>c.mode==='demo'&&c.action==='get_dashboard');
+          assert.equal(demoDash?.limit,500,'dashboard limit is not 500');
+          for(const c of calls.filter(c=>c.mode==='demo'&&['get_demo_courses','upgrade_demo_session','verify_session','get_dashboard'].includes(c.action))){
+            assert.equal(c.client_build,6078,c.action+': client_build');
+            assert.equal(c.app_version_code,6078,c.action+': app_version_code');
+            assert.equal(c.client_version,'web-6078',c.action+': client_version');
+            assert.equal(c.api_contract_version,1,c.action+': api_contract_version');
+          }
+          const theme = page.getByRole('button',{name:/Dark Mode|Light Mode/});
+          await theme.waitFor(); await theme.click();
+          assert.equal(await page.evaluate(()=>document.documentElement.dataset.btsTheme),'dark','dark mode did not apply');
+          await theme.click();
+          assert.equal(await page.evaluate(()=>document.documentElement.dataset.btsTheme),'light','light mode did not restore');
+
+          const paidCtx = await browser.newContext();
+          const paid = await paidCtx.newPage();
+          await mockApi(paid,'paid');
+          await paid.goto('http://127.0.0.1:4173/bts-daily-tests/#/login',{waitUntil:'domcontentloaded'});
+          await paid.getByPlaceholder('e.g. 9876543210').fill('8888888888');
+          await paid.getByPlaceholder('Enter your access code').fill('SMOKE_ACCESS');
+          await paid.getByRole('button',{name:'Login Securely'}).click();
+          await paid.getByText('My Tests').waitFor({timeout:10000});
+          await paid.getByText('SMOKE PAID HINDI').waitFor();
+          await paid.getByText('SMOKE PAID ENGLISH').waitFor();
+          const chip = paid.getByRole('button',{name:/Varg 2.*Hindi/i}).first();
+          await chip.click();
+          await paid.getByText('SMOKE PAID HINDI').waitFor();
+          assert.equal(await paid.getByText('SMOKE PAID ENGLISH').count(),0,'Varg 2 Hindi filter leaked English test');
+
+          const helperCtx = await browser.newContext();
+          const helper = await helperCtx.newPage();
+          await helper.addInitScript(()=>{localStorage.setItem('mobile','9999999999');localStorage.setItem('sessionToken','DEMO_FREE_9999999999_Varg 2 Hindi_Smoke')});
+          await mockApi(helper,'demo');
+          await helper.goto('http://127.0.0.1:4173/helper-test.html#/result/SMK-HI-A',{waitUntil:'domcontentloaded'});
+          await helper.getByRole('button',{name:'↻ Attempts'}).waitFor();
+          await helper.getByRole('button',{name:'↻ Attempts'}).click();
+          await helper.getByText('2/7 attempts used • 5 remaining').waitFor();
+          await helper.getByText(/Attempt 1.*Official.*Score 40/50/).waitFor();
+          await helper.getByText(/Attempt 2.*Practice.*Score 44/50/).waitFor();
+          await helper.getByRole('button',{name:/Dark Mode|Light Mode/}).click();
+          assert.equal(await helper.evaluate(()=>document.documentElement.dataset.btsTheme),'dark','helper theme failed');
+          await helper.evaluate(()=>{location.hash='#/login'});
+          await helper.getByText('Call Support • 9669946966').waitFor();
+
+          assert.equal(errs.length,0,'page errors: '+errs.join(' | '));
+          await browser.close();
+          console.log('SMOKE_PASS: branch runtime + mocked API integration');
+          console.log(JSON.stringify({calls:calls.map(({mode,action,client_build,app_version_code,client_version,api_contract_version,limit})=>({mode,action,client_build,app_version_code,client_version,api_contract_version,limit}))},null,2));
+          JS
+          CHROME_PATH="$CHROME" node /tmp/smoke.mjs
+          grep -q 'report_question' assets/index-D6L0VNZw.js
+          grep -q 'upgrade_demo_session' assets/index-D6L0VNZw.js
+          grep -q 'client_build:6078' assets/index-D6L0VNZw.js
+          echo 'STATIC_WIRING_PASS'
