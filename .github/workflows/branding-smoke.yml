@@ -88,7 +88,13 @@ jobs:
           }
           async function assertLoaded(img,label){
             await img.waitFor({state:'visible',timeout:15000});
-            await img.evaluate(el=>el.decode?.().catch(()=>{}));\n            await img.page().waitForFunction(el=>el.complete&&el.naturalWidth>0,await img.elementHandle(),{timeout:15000});\n            const x=await img.evaluate(el=>({complete:el.complete,naturalWidth:el.naturalWidth,naturalHeight:el.naturalHeight,src:el.src}));
+            await img.evaluate(el=>new Promise((resolve,reject)=>{
+              if(el.complete&&el.naturalWidth>0)return resolve(true);
+              const timer=setTimeout(()=>reject(new Error('logo load timeout')),15000);
+              el.addEventListener('load',()=>{clearTimeout(timer);resolve(true)},{once:true});
+              el.addEventListener('error',()=>{clearTimeout(timer);reject(new Error('logo load error'))},{once:true});
+            }));
+            const x=await img.evaluate(el=>({complete:el.complete,naturalWidth:el.naturalWidth,naturalHeight:el.naturalHeight,src:el.src}));
             console.log(label+':'+JSON.stringify(x));
             assert.ok(x.complete && x.naturalWidth>0 && x.naturalHeight>0,label+' logo image failed to load');
             assert.ok(x.src.endsWith('/bts-daily-tests/assets/bts-logo.png'),label+' logo source mismatch');
