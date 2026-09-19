@@ -1,0 +1,97 @@
+name: Temporary Live Demo Login Diagnostic
+
+on:
+  push:
+    branches:
+      - diagnose-live-demo-login-20260920
+    paths:
+      - .github/workflows/live-demo-login-diagnostic.yml
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Install Chromium harness
+        shell: bash
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+
+      - name: Reproduce live demo login
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > live-demo-login.mjs <<'NODE'
+          import assert from 'node:assert/strict';
+          import { chromium } from 'playwright';
+
+          const browser=await chromium.launch({headless:true});
+          const context=await browser.newContext();
+          const page=await context.newPage();
+
+          const api=[];
+          const errors=[];
+          page.on('pageerror',e=>{errors.push(String(e));console.log('PAGEERROR:'+String(e))});
+          page.on('console',m=>console.log('CONSOLE:'+m.type()+':'+m.text()));
+          page.on('request',req=>{
+            if(!req.url().includes('/functions/v1/student-api'))return;
+            let body={};try{body=req.postDataJSON()||{}}catch{}
+            api.push({type:'request',body});
+            console.log('API_REQ:'+JSON.stringify(body));
+          });
+          page.on('response',async res=>{
+            if(!res.url().includes('/functions/v1/student-api'))return;
+            let body='';try{body=await res.text()}catch(e){body='ERR:'+e}
+            api.push({type:'response',status:res.status(),body});
+            console.log('API_RES:'+res.status()+':'+body.slice(0,3000));
+          });
+
+          await page.goto('https://bilaspurtestseries.com/bts-daily-tests/#/login',{waitUntil:'domcontentloaded',timeout:60000});
+          const consent=page.getByRole('button',{name:/I Agree & Continue/i});
+          if(await consent.isVisible().catch(()=>false)) await consent.click();
+
+          await page.getByRole('heading',{name:'BTS Portal'}).waitFor({timeout:30000});
+          await page.getByRole('button',{name:'Free Demo'}).click();
+          const select=page.getByRole('combobox');
+          await select.waitFor({state:'visible',timeout:30000});
+          await page.waitForFunction(()=>document.querySelector('select')?.options.length>=1,null,{timeout:30000});
+
+          const options=await select.locator('option').allTextContents();
+          console.log('COURSES:'+JSON.stringify(options));
+
+          const inputs=page.locator('input');
+          await inputs.nth(0).fill('Smoke Test');
+          await inputs.nth(1).fill('9999999999');
+          await select.selectOption({index:0});
+
+          await page.getByRole('button',{name:'Start Free Demo'}).click();
+          await page.waitForTimeout(8000);
+
+          const state=await page.evaluate(()=>({
+            hash:location.hash,
+            mobile:localStorage.getItem('mobile'),
+            token:localStorage.getItem('sessionToken'),
+            body:document.body.innerText.slice(0,6000)
+          }));
+          console.log('FINAL_STATE:'+JSON.stringify(state));
+
+          const reqs=api.filter(x=>x.type==='request').map(x=>x.body?.action);
+          console.log('ACTIONS:'+JSON.stringify(reqs));
+
+          assert.ok(reqs.includes('upgrade_demo_session'),'upgrade_demo_session not called');
+          assert.ok(reqs.includes('verify_session'),'verify_session not called');
+          if(state.hash==='#/login') throw new Error('DEMO_LOGIN_RETURNED_TO_LOGIN');
+          assert.ok(/Welcome Back|Free Demo Access|My Tests/i.test(state.body),'dashboard did not render after demo login');
+          assert.equal(errors.length,0,'page errors: '+errors.join(' | '));
+
+          console.log('LIVE_DEMO_LOGIN_PASS');
+          await browser.close();
+          NODE
+
+          node live-demo-login.mjs
