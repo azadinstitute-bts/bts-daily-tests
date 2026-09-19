@@ -133,9 +133,9 @@ jobs:
 
           // Authenticated pages
           async function authedPage(hash){
-            const p=await newPage();
-            await p.goto('http://127.0.0.1:4173/bts-daily-tests/#/login',{waitUntil:'domcontentloaded'});
-            await p.evaluate(()=>{
+            const p=await context.newPage();
+            await p.addInitScript(()=>{
+              localStorage.setItem('bts_privacy_consent_agreed_v1','true');
               localStorage.setItem('mobile','9000000000');
               localStorage.setItem('sessionToken','SES_BRAND_SMOKE');
             });
