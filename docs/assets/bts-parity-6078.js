@@ -5,7 +5,7 @@ const device=mobile=>{const m=String(mobile||read("mobile")||"");if(m&&m.length>
 const post=async(action,body={})=>{const mobile=body.mobile||read("mobile");const r=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,device_token:device(mobile),client_version:"web-6078",app_version_code:6078,client_build:6078,api_contract_version:1,...body})});let j={};try{j=await r.json()}catch{}if(!r.ok||j?.ok!==true)throw new Error(j?.error||"Request failed");return j};
 const apply=mode=>{const m=mode==="dark"?"dark":"light";document.documentElement.dataset.btsTheme=m;document.documentElement.style.colorScheme=m;try{localStorage.setItem(KEY,m)}catch{};document.querySelectorAll("[data-bts-theme-toggle]").forEach(b=>b.textContent=m==="dark"?"☀️ Light Mode":"🌙 Dark Mode")};
 apply(read(KEY)||"light");
-const LOGO="https://bilaspurtestseries.com/assets/bts-logo.png";
+const LOGO="/bts-daily-tests/assets/bts-logo.png";
 const makeLogo=(className,onFail)=>{const img=document.createElement("img");img.src=LOGO;img.alt="Bilaspur Test Series logo";img.className=className;img.dataset.btsBrandLogo="1";img.decoding="async";img.loading="eager";img.onerror=()=>{if(onFail)onFail();else img.remove()};return img};
 const exact=(selector,text)=>[...document.querySelectorAll(selector)].find(el=>(el.textContent||"").trim()===text);
 function brandBadge(text,sizeClass){
