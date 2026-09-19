@@ -69,7 +69,10 @@ jobs:
                 case 'verify_session': return json(route,{ok:true,student:{name: mode==='demo'?'Demo Smoke':'Paid Smoke',mobile:body.mobile||'9999999999'}});
                 case 'get_dashboard': return json(route,{ok:true,
                   student:{name: mode==='demo'?'Demo Smoke':'Paid Smoke',mobile:body.mobile||'9999999999'},
-                  entitlements:[{course:'Teacher',post:'Varg 2',subject:'Hindi',displayName:'Varg 2 Hindi'}],
+                  entitlements: mode==='paid' ? [
+                    {course:'Teacher',post:'Varg 2',subject:'Hindi',displayName:'Varg 2 Hindi'},
+                    {course:'CTET',post:'Paper 1',subject:'Primary',displayName:'CTET Paper 1'}
+                  ] : [],
                   latest_tests: mode==='demo' ? [
                     mkTest('SMK-HI-A','SMOKE AVAILABLE HINDI','Hindi','available'),
                     mkTest('SMK-EN-P','SMOKE PREMIUM ENGLISH','English','premium')
