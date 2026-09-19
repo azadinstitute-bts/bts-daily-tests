@@ -53,7 +53,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat > /tmp/live-verify.mjs <<'NODE'
+          cat > live-verify.mjs <<'NODE'
           import assert from 'node:assert/strict';
           import { chromium } from 'playwright';
 
@@ -116,4 +116,4 @@ jobs:
           await browser.close();
           NODE
 
-          node /tmp/live-verify.mjs
+          node live-verify.mjs
