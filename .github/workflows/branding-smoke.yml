@@ -1,0 +1,171 @@
+name: Temporary BTS Branding Smoke
+
+on:
+  push:
+    branches:
+      - branding-logo-placement-20260920
+    paths:
+      - .github/workflows/branding-smoke.yml
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Static parity and syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmp -s assets/bts-parity-6078.js docs/assets/bts-parity-6078.js
+          cmp -s assets/bts-parity-6078.css docs/assets/bts-parity-6078.css
+          cmp -s index.html docs/index.html
+          node --check assets/bts-parity-6078.js
+          grep -F 'https://bilaspurtestseries.com/assets/bts-logo.png' index.html
+
+      - name: Install Chromium
+        shell: bash
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+
+      - name: Render branding placements
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd ..
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/branding-http.log 2>&1 &
+          SERVER=$!
+          trap 'kill $SERVER || true' EXIT
+          cd bts-daily-tests
+
+          cat > branding-smoke.mjs <<'NODE'
+          import assert from 'node:assert/strict';
+          import { chromium } from 'playwright';
+
+          const browser=await chromium.launch({headless:true});
+          const context=await browser.newContext({viewport:{width:390,height:844}});
+          await context.route('**/functions/v1/student-api',async route=>{
+            let body={};try{body=route.request().postDataJSON()||{}}catch{}
+            const now=Date.now();
+            let j={ok:true,status:'SUCCESS'};
+            switch(body.action){
+              case 'get_demo_courses':
+                j.courses=['CG Assistant Teacher (Varg 3)'];break;
+              case 'verify_session':
+                j.student={name:'Brand Smoke',mobile:'9000000000',status:'active'};break;
+              case 'get_dashboard':
+                Object.assign(j,{student:{name:'Brand Smoke',mobile:'9000000000',status:'active'},entitlements:[],latest_tests:[],attempted_tests:[],app_metadata:{}});break;
+              case 'get_test_public':
+                Object.assign(j,{
+                  test:{test_code:'BRAND_SMOKE',title:'Brand Smoke Test',duration_minutes:60,q_count:1,total_marks:1},
+                  content_version:'brand-v1',
+                  attempt:{attempt_id:'ATTEMPT_SMOKE',attempt_token:'ATT_123456789012345678901234',started_at:new Date(now).toISOString(),expires_at:new Date(now+3600000).toISOString(),status:'ACTIVE'},
+                  questions:[{qno:1,question_text:'Branding smoke question',options:['One','Two','Three','Four'],correct_option_index:0,metadata:{}}],
+                  passages:[]
+                });break;
+              case 'get_result_detail':
+                Object.assign(j,{
+                  result:{test_code:'BRAND_SMOKE',title:'Brand Smoke Test',score:1,total:1,correct:1,wrong:0,unattempted:0,rank:1},
+                  questions:[{qno:1,question_text:'Branding smoke question',options:['One','Two','Three','Four'],correct_option_index:0,selected_index:0,attempted:true,is_correct:true,explanation:'Smoke explanation',subject:'General',metadata:{}}],
+                  passages:[]
+                });break;
+              case 'get_leaderboard':
+                Object.assign(j,{leaderboard:[],total_students:0,your_rank:null,your_score:null});break;
+              default: break;
+            }
+            await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(j)});
+          });
+
+          async function newPage(){
+            const p=await context.newPage();
+            await p.addInitScript(()=>{
+              localStorage.setItem('bts_privacy_consent_agreed_v1','true');
+            });
+            return p;
+          }
+          async function assertLoaded(img,label){
+            await img.waitFor({state:'visible',timeout:15000});
+            const x=await img.evaluate(el=>({complete:el.complete,naturalWidth:el.naturalWidth,naturalHeight:el.naturalHeight,src:el.src}));
+            console.log(label+':'+JSON.stringify(x));
+            assert.ok(x.complete && x.naturalWidth>0 && x.naturalHeight>0,label+' logo image failed to load');
+            assert.equal(x.src,'https://bilaspurtestseries.com/assets/bts-logo.png',label+' logo source mismatch');
+          }
+
+          // Login
+          {
+            const p=await newPage();
+            await p.goto('http://127.0.0.1:4173/bts-daily-tests/#/login',{waitUntil:'domcontentloaded'});
+            await p.getByRole('heading',{name:'BTS Portal'}).waitFor();
+            const img=p.locator('.bts-brand-login-logo');
+            await assertLoaded(img,'LOGIN');
+            const iconHref=await p.locator('link[rel="icon"]').getAttribute('href');
+            assert.equal(iconHref,'https://bilaspurtestseries.com/assets/bts-logo.png');
+            await p.close();
+          }
+
+          // Privacy
+          {
+            const p=await newPage();
+            await p.goto('http://127.0.0.1:4173/bts-daily-tests/#/privacy',{waitUntil:'domcontentloaded'});
+            await p.getByText('Privacy & Data Disclosure',{exact:true}).waitFor();
+            await assertLoaded(p.locator('header .bts-brand-logo'),'PRIVACY');
+            assert.equal(await p.locator('header').getByText('B',{exact:true}).count(),0);
+            await p.close();
+          }
+
+          // Guide
+          {
+            const p=await newPage();
+            await p.goto('http://127.0.0.1:4173/bts-daily-tests/#/guide',{waitUntil:'domcontentloaded'});
+            await p.getByText(/User Guide & Tutorial|यूज़र गाइड/).waitFor();
+            await assertLoaded(p.locator('header .bts-brand-logo'),'GUIDE');
+            await p.close();
+          }
+
+          // Authenticated pages
+          async function authedPage(hash){
+            const p=await newPage();
+            await p.goto('http://127.0.0.1:4173/bts-daily-tests/#/login',{waitUntil:'domcontentloaded'});
+            await p.evaluate(()=>{
+              localStorage.setItem('mobile','9000000000');
+              localStorage.setItem('sessionToken','SES_BRAND_SMOKE');
+            });
+            await p.goto('http://127.0.0.1:4173/bts-daily-tests/'+hash,{waitUntil:'domcontentloaded'});
+            return p;
+          }
+
+          // Dashboard
+          {
+            const p=await authedPage('#/');
+            await p.getByText('Bilaspur Test Series',{exact:true}).waitFor({timeout:20000});
+            await assertLoaded(p.locator('header .bts-brand-logo'),'DASHBOARD');
+            assert.equal(await p.locator('header').getByText('B',{exact:true}).count(),0);
+            await p.close();
+          }
+
+          // Test
+          {
+            const p=await authedPage('#/test/BRAND_SMOKE');
+            await p.getByText('Brand Smoke Test',{exact:true}).waitFor({timeout:20000});
+            await assertLoaded(p.locator('header .bts-brand-logo'),'TEST');
+            const boxes=await p.locator('header .bts-brand-logo').boundingBox();
+            assert.ok(boxes && boxes.width>=24 && boxes.height>=24,'test logo too small');
+            await p.close();
+          }
+
+          // Result
+          {
+            const p=await authedPage('#/result/BRAND_SMOKE');
+            await p.getByText('Result',{exact:true}).waitFor({timeout:20000});
+            await assertLoaded(p.locator('header .bts-brand-logo'),'RESULT');
+            await p.close();
+          }
+
+          console.log('BTS_BRANDING_SMOKE_PASS');
+          await browser.close();
+          NODE
+
+          node branding-smoke.mjs
