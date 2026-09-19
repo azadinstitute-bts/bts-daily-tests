@@ -55,8 +55,11 @@ jobs:
           const calls = [];
           const json = (route, body) => route.fulfill({status:200, contentType:'application/json', body:JSON.stringify(body)});
           const mkTest = (code,title,subject,status='available') => ({
-            test_code:code,test_title:title,subject,topic:subject+' topic',post:'Varg 2',course:'Teacher',exam:'Varg 2',
-            week_number:7,day_number:1,status,scheduled_at:'2026-09-20T10:00:00+05:30',updated_at:'2026-09-20T00:00:00Z'
+            test_code:code,test_title:title,subject,topic:subject+' topic',
+            post: subject==='Hindi' ? 'Teacher - Hindi' : subject==='English' ? 'Teacher - English' : 'Teacher',
+            course: subject==='Hindi' ? 'Varg 2 Hindi' : subject==='English' ? 'Varg 2 English' : 'Teacher',
+            exam:'Varg 2',week_number:7,day_number:1,status,
+            scheduled_at:'2026-09-20T10:00:00+05:30',updated_at:'2026-09-20T00:00:00Z'
           });
           async function mockApi(page, mode='demo') {
             await page.route(apiUrl, async route => {
@@ -70,8 +73,8 @@ jobs:
                 case 'get_dashboard': return json(route,{ok:true,
                   student:{name: mode==='demo'?'Demo Smoke':'Paid Smoke',mobile:body.mobile||'9999999999'},
                   entitlements: mode==='paid' ? [
-                    {course:'Teacher',post:'Varg 2',subject:'Hindi',displayName:'Varg 2 Hindi'},
-                    {course:'CTET',post:'Paper 1',subject:'Primary',displayName:'CTET Paper 1'}
+                    {course_id:'varg2_hindi',course:'',post:'Teacher (Varg 2)',subject:'Hindi'},
+                    {course_id:'ctet_paper1',course:'',post:'Paper I Primary',subject:'Primary'}
                   ] : [],
                   latest_tests: mode==='demo' ? [
                     mkTest('SMK-HI-A','SMOKE AVAILABLE HINDI','Hindi','available'),
