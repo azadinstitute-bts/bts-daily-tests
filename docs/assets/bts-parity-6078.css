@@ -15,3 +15,11 @@ html[data-bts-theme="dark"] .q-content .statement-box,html[data-bts-theme="dark"
 .bts-attempt-list{display:flex;flex-direction:column;gap:8px;margin:10px 0}.bts-attempt-row{width:100%;text-align:left;border:1px solid var(--line);border-radius:10px;background:var(--color-surface);color:var(--color-text-main);padding:10px 12px;font-weight:700;line-height:1.35;cursor:pointer}
 .bts-attempt-row:hover{background:var(--color-surface-hover)}.bts-attempt-loading{padding:14px 0;color:var(--color-text-muted);font-weight:700}
 .bts-attempt-close{width:100%;border:0;border-radius:9px;background:var(--navy);color:#fff!important;padding:10px;font-weight:900;cursor:pointer}
+
+.bts-brand-logo{display:block;object-fit:cover;flex-shrink:0;user-select:none;-webkit-user-drag:none;background:#fff}
+.bts-brand-logo-fill{width:100%;height:100%;border-radius:inherit}
+.bts-brand-logo-header{width:40px;height:40px;border-radius:10px}
+.bts-brand-logo-privacy{width:34px;height:34px;border-radius:8px}
+.bts-brand-logo-small{width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,.3)}
+.bts-brand-login-logo{width:84px;height:84px;margin:0 auto .75rem;border-radius:18px;box-shadow:0 5px 16px rgba(6,43,92,.16)}
+@media(max-width:420px){.bts-brand-login-logo{width:72px;height:72px;border-radius:16px}.bts-brand-logo-small{width:26px;height:26px}}

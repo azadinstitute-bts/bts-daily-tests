@@ -5,6 +5,37 @@ const device=mobile=>{const m=String(mobile||read("mobile")||"");if(m&&m.length>
 const post=async(action,body={})=>{const mobile=body.mobile||read("mobile");const r=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,device_token:device(mobile),client_version:"web-6078",app_version_code:6078,client_build:6078,api_contract_version:1,...body})});let j={};try{j=await r.json()}catch{}if(!r.ok||j?.ok!==true)throw new Error(j?.error||"Request failed");return j};
 const apply=mode=>{const m=mode==="dark"?"dark":"light";document.documentElement.dataset.btsTheme=m;document.documentElement.style.colorScheme=m;try{localStorage.setItem(KEY,m)}catch{};document.querySelectorAll("[data-bts-theme-toggle]").forEach(b=>b.textContent=m==="dark"?"☀️ Light Mode":"🌙 Dark Mode")};
 apply(read(KEY)||"light");
+const LOGO="/bts-daily-tests/assets/bts-logo.png";
+const makeLogo=(className,onFail)=>{const img=document.createElement("img");img.src=LOGO;img.alt="Bilaspur Test Series logo";img.className=className;img.dataset.btsBrandLogo="1";img.decoding="async";img.loading="eager";img.onerror=()=>{if(onFail)onFail();else img.remove()};return img};
+const exact=(selector,text)=>[...document.querySelectorAll(selector)].find(el=>(el.textContent||"").trim()===text);
+function brandBadge(text,sizeClass){
+ const label=exact("header *",text);if(!label)return;
+ let badge=label.previousElementSibling;
+ if(!badge||(badge.textContent||"").trim()!=="B")badge=label.parentElement?.previousElementSibling;
+ if(!badge||badge.dataset?.btsBrandBadge==="1"||(badge.textContent||"").trim()!=="B")return;
+ const old=badge.textContent;badge.textContent="";badge.dataset.btsBrandBadge="1";
+ badge.appendChild(makeLogo("bts-brand-logo bts-brand-logo-fill "+sizeClass,()=>{badge.textContent=old;delete badge.dataset.btsBrandBadge}))
+}
+function insertHeaderLogo(routePattern){
+ if(!routePattern.test(location.hash))return;
+ const header=document.querySelector("header");if(!header||header.querySelector("[data-bts-brand-logo]"))return;
+ const back=header.querySelector("button");if(!back)return;
+ const img=makeLogo("bts-brand-logo bts-brand-logo-small");
+ back.insertAdjacentElement("afterend",img)
+}
+function ensureBranding(){
+ const portal=exact("h1","BTS Portal");
+ if(portal&&!portal.parentElement?.querySelector(".bts-brand-login-logo"))portal.insertAdjacentElement("beforebegin",makeLogo("bts-brand-logo bts-brand-login-logo"));
+ brandBadge("Bilaspur Test Series","bts-brand-logo-header");
+ brandBadge("Privacy & Data Disclosure","bts-brand-logo-privacy");
+ if(location.hash.startsWith("#/guide")){
+  const header=document.querySelector("header");
+  if(header&&!header.querySelector("[data-bts-brand-logo]")){
+   const back=header.querySelector("button");if(back)back.insertAdjacentElement("afterend",makeLogo("bts-brand-logo bts-brand-logo-small"))
+  }
+ }
+ insertHeaderLogo(/^#\/(test|result)\//)
+}
 function ensureThemeButton(){
  const guide=[...document.querySelectorAll("button")].find(b=>(b.textContent||"").trim()==="User Guide");
  if(!guide||document.querySelector("[data-bts-theme-toggle]"))return;
@@ -62,7 +93,7 @@ function ensureAttemptButton(){
  b.onclick=e=>{e.preventDefault();e.stopPropagation();openAttemptHistory(decodeURIComponent(m[1]))};
  header.appendChild(b)
 }
-const tick=()=>{ensureThemeButton();ensureLoginSupport();ensureDemoFlash();ensureAttemptButton()};
+const tick=()=>{ensureBranding();ensureThemeButton();ensureLoginSupport();ensureDemoFlash();ensureAttemptButton()};
 new MutationObserver(tick).observe(document.documentElement,{subtree:true,childList:true});
 window.addEventListener("hashchange",()=>{flashKey="";flashPendingKey="";closeAttemptModal();setTimeout(tick,50)});
 setTimeout(tick,50);
