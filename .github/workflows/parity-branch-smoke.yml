@@ -130,6 +130,8 @@ jobs:
             assert.equal(c.client_version,'web-6078',c.action+': client_version');
             assert.equal(c.api_contract_version,1,c.action+': api_contract_version');
           }
+          await page.getByTitle('Menu').click();
+          await page.getByRole('button',{name:/Call Support/}).waitFor();
           const theme = page.getByRole('button',{name:/Dark Mode|Light Mode/});
           await theme.waitFor(); await theme.click();
           assert.equal(await page.evaluate(()=>document.documentElement.dataset.btsTheme),'dark','dark mode did not apply');
