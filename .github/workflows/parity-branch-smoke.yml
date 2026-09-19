@@ -116,7 +116,7 @@ jobs:
           await page.getByPlaceholder('e.g. 9876543210').fill('9999999999');
           await demoSelect.selectOption({label:'Varg 2 Hindi'});
           await page.getByRole('button',{name:'Start Free Demo'}).click();
-          await page.getByText('My Tests').waitFor({timeout:10000});
+          await page.getByRole('heading',{name:'My Tests'}).waitFor({timeout:10000});
           await page.getByText('Demo policy smoke').waitFor();
           const demoText = await page.locator('body').innerText();
           assert(demoText.includes('SMOKE AVAILABLE HINDI'),'available demo card missing');
@@ -145,7 +145,7 @@ jobs:
           await paid.getByPlaceholder('e.g. 9876543210').fill('8888888888');
           await paid.getByPlaceholder('Enter your access code').fill('SMOKE_ACCESS');
           await paid.getByRole('button',{name:'Login Securely'}).click();
-          await paid.getByText('My Tests').waitFor({timeout:10000});
+          await paid.getByRole('heading',{name:'My Tests'}).waitFor({timeout:10000});
           await paid.getByText('SMOKE PAID HINDI').waitFor();
           await paid.getByText('SMOKE PAID ENGLISH').waitFor();
           const chip = paid.getByRole('button',{name:/Varg 2.*Hindi/i}).first();
