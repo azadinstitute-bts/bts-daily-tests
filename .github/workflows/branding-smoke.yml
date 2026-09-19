@@ -22,7 +22,7 @@ jobs:
           cmp -s assets/bts-parity-6078.css docs/assets/bts-parity-6078.css
           cmp -s index.html docs/index.html
           node --check assets/bts-parity-6078.js
-          grep -F 'https://bilaspurtestseries.com/assets/bts-logo.png' index.html
+          grep -F '/bts-daily-tests/assets/bts-logo.png' index.html
 
       - name: Install Chromium
         shell: bash
@@ -88,10 +88,10 @@ jobs:
           }
           async function assertLoaded(img,label){
             await img.waitFor({state:'visible',timeout:15000});
-            const x=await img.evaluate(el=>({complete:el.complete,naturalWidth:el.naturalWidth,naturalHeight:el.naturalHeight,src:el.src}));
+            await img.evaluate(el=>el.decode?.().catch(()=>{}));\n            await img.page().waitForFunction(el=>el.complete&&el.naturalWidth>0,await img.elementHandle(),{timeout:15000});\n            const x=await img.evaluate(el=>({complete:el.complete,naturalWidth:el.naturalWidth,naturalHeight:el.naturalHeight,src:el.src}));
             console.log(label+':'+JSON.stringify(x));
             assert.ok(x.complete && x.naturalWidth>0 && x.naturalHeight>0,label+' logo image failed to load');
-            assert.equal(x.src,'https://bilaspurtestseries.com/assets/bts-logo.png',label+' logo source mismatch');
+            assert.ok(x.src.endsWith('/bts-daily-tests/assets/bts-logo.png'),label+' logo source mismatch');
           }
 
           // Login
@@ -102,7 +102,7 @@ jobs:
             const img=p.locator('.bts-brand-login-logo');
             await assertLoaded(img,'LOGIN');
             const iconHref=await p.locator('link[rel="icon"]').getAttribute('href');
-            assert.equal(iconHref,'https://bilaspurtestseries.com/assets/bts-logo.png');
+            assert.equal(iconHref,'/bts-daily-tests/assets/bts-logo.png');
             await p.close();
           }
 
