@@ -61,6 +61,17 @@ PASS:
 - Branch is based on current main and is not behind main.
 - Only web deployment files are changed.
 
+## Final backend read-only sanity
+- student-api: v145
+- attempt policy: 7 total attempts; attempt 1 official; 6 practice; ranking FIRST_ATTEMPT_ONLY
+- demo course options: 15
+- Varg 2 Hindi demo rows: 7
+- Varg 2 English demo rows: 7
+- enabled demo mappings: 102
+- verified Week-7 mappings: 102/102
+- enabled mappings outside Week 7: 0
+- no backend mutation was performed during this web parity pass
+
 ## Deployment gate
 Do not merge to main until a focused browser smoke covers:
 - paid login
