@@ -10,8 +10,9 @@ const makeLogo=(className,onFail)=>{const img=document.createElement("img");img.
 const exact=(selector,text)=>[...document.querySelectorAll(selector)].find(el=>(el.textContent||"").trim()===text);
 function brandBadge(text,sizeClass){
  const label=exact("header *",text);if(!label)return;
- const row=label.parentElement;if(!row)return;
- const badge=row.previousElementSibling;if(!badge||badge.dataset?.btsBrandBadge==="1"||(badge.textContent||"").trim()!=="B")return;
+ let badge=label.previousElementSibling;
+ if(!badge||(badge.textContent||"").trim()!=="B")badge=label.parentElement?.previousElementSibling;
+ if(!badge||badge.dataset?.btsBrandBadge==="1"||(badge.textContent||"").trim()!=="B")return;
  const old=badge.textContent;badge.textContent="";badge.dataset.btsBrandBadge="1";
  badge.appendChild(makeLogo("bts-brand-logo bts-brand-logo-fill "+sizeClass,()=>{badge.textContent=old;delete badge.dataset.btsBrandBadge}))
 }
