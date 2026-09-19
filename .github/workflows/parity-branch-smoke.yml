@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
       - name: Install browser driver
         run: npm install --no-save playwright-core
       - name: Run non-destructive browser smoke
@@ -138,8 +138,8 @@ jobs:
           await helper.getByRole('button',{name:'↻ Attempts'}).waitFor();
           await helper.getByRole('button',{name:'↻ Attempts'}).click();
           await helper.getByText('2/7 attempts used • 5 remaining').waitFor();
-          await helper.getByText(/Attempt 1.*Official.*Score 40/50/).waitFor();
-          await helper.getByText(/Attempt 2.*Practice.*Score 44/50/).waitFor();
+          await helper.getByText('Attempt 1 • Official • Score 40/50').waitFor();
+          await helper.getByText('Attempt 2 • Practice • Score 44/50').waitFor();
           await helper.getByRole('button',{name:/Dark Mode|Light Mode/}).click();
           assert.equal(await helper.evaluate(()=>document.documentElement.dataset.btsTheme),'dark','helper theme failed');
           await helper.evaluate(()=>{location.hash='#/login'});
