@@ -1,0 +1,28 @@
+name: Temporary Live CSS Byte Check
+
+on:
+  push:
+    branches:
+      - hotfix-matching-dark-contrast-20260920
+    paths:
+      - .github/workflows/live-css-byte-check.yml
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Compare live CSS with main
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://bilaspurtestseries.com/bts-daily-tests/assets/bts-parity-6078.css?verify=f8cda8bcd8e323dc4baa79fdf1397dc5b095cc17"
+          curl -fLsS -H 'Cache-Control: no-cache' "$URL" -o /tmp/live.css
+          cmp -s assets/bts-parity-6078.css /tmp/live.css
+          grep -F 'html[data-bts-theme="dark"] .glass-panel{background:var(--color-surface)!important;color:var(--color-text-main)!important}' /tmp/live.css
+          grep -F 'html[data-bts-theme="dark"] .q-content{color:var(--color-text-main)}' /tmp/live.css
+          echo "LIVE_MATCHING_CSS_PASS"
