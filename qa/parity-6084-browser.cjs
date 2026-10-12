@@ -17,7 +17,7 @@ const server=http.createServer((req,res)=>{
  }
  res.setHeader('Content-Type',target.endsWith('.js')?'application/javascript':target.endsWith('.css')?'text/css':target.endsWith('.png')?'image/png':'text/html');res.end(data);
 });
-function record(variant,name){results.push({variant,test:name,status:'PASS'});}
+function record(variant,name){results.push({variant,test:name,status:'PASS'});console.log('CASE_PASS '+variant+' '+name);}
 (async()=>{
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  const base='http://127.0.0.1:'+server.address().port+'/bts-daily-tests/';
@@ -51,7 +51,7 @@ function record(variant,name){results.push({variant,test:name,status:'PASS'});}
   await page.getByRole('button',{name:'Course B',exact:true}).click();assert.equal(await filter.inputValue(),'');assert.equal(await filter.locator('option').count(),2);assert.match(await filter.innerText(),/Week 1 \(5 Oct – 6 Oct\)/);assert.match(await page.locator('body').innerText(),/Week 1 • Day 2 • 6 Oct 2026/);assert(!(await page.locator('body').innerText()).includes('A1 paper'));record(variant,'course change resets week and retains exact access');
   await filter.selectOption('1');dashboardTests=tests.slice(0,2);await page.getByRole('button',{name:'Refresh',exact:true}).click();await page.waitForFunction(()=>document.querySelector('select')===null||document.querySelector('select').value==='');record(variant,'refresh removes stale week selection');dashboardTests=tests;await page.getByRole('button',{name:'Refresh',exact:true}).click();
   await page.getByRole('button',{name:'Menu',exact:true}).click();const link=page.getByRole('link',{name:'Telegram Community',exact:true});await link.waitFor();assert.equal(await link.getAttribute('href'),communityUrl);assert.equal(await link.getAttribute('rel'),'noopener noreferrer');record(variant,'backend-controlled Telegram link');
-  await page.getByRole('button',{name:'Menu',exact:true}).click();communityEnabled=false;await page.getByRole('button',{name:'Refresh',exact:true}).click();await page.getByRole('button',{name:'Menu',exact:true}).click();await page.waitForTimeout(150);assert.equal(await page.getByRole('link',{name:'Telegram Community',exact:true}).count(),0);record(variant,'disabled Telegram menu hidden');
+  await page.mouse.click(5,200);communityEnabled=false;await page.getByRole('button',{name:'Refresh',exact:true}).click();await page.getByRole('button',{name:'Menu',exact:true}).click();await page.waitForTimeout(150);assert.equal(await page.getByRole('link',{name:'Telegram Community',exact:true}).count(),0);record(variant,'disabled Telegram menu hidden');
   await page.getByRole('button',{name:/Dark Mode/}).click();await page.goto(base+'#/test/A1');await page.locator('.bts-question-status').waitFor();assert.match(await page.locator('.bts-question-status').innerText(),/Viewed/);assert.match(await page.locator('.q-content').first().innerText(),/unknown.*known/s);record(variant,'plain structured wording remains intact');
   await page.getByRole('button',{name:'Question Navigator',exact:true}).click();
   assert.equal(await page.locator('[data-qno="2"]').getAttribute('data-question-state'),'viewed');assert.equal(await page.locator('[data-qno="17"]').getAttribute('data-question-state'),'unanswered');
