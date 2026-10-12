@@ -1,0 +1,21 @@
+name: Web parity 6084 synthetic regression
+on:
+  push:
+    branches: [web-parity-6084-20261012]
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated test dependency
+        run: npm install --no-save --ignore-scripts playwright@1.58.2
+      - name: Modern and legacy mobile and desktop regression
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+        run: node qa/parity-6084-browser.cjs
