@@ -61,10 +61,11 @@ async function ensureDemoFlash(){
 }
 function ensureLoginSupport(){
  if(!location.hash.startsWith("#/login")){document.querySelector("[data-bts-login-support]")?.remove();return}
+ const form=document.querySelector(".glass-panel form");if(!form)return;
  if(document.querySelector("[data-bts-login-support]"))return;
- const login=[...document.querySelectorAll("button")].find(b=>(b.textContent||"").trim()==="Login Securely");if(!login)return;
- const b=document.createElement("button");b.type="button";b.dataset.btsLoginSupport="1";b.className="btn btn-outline";b.style.width="100%";b.style.marginTop=".65rem";b.textContent="Call Support • 9669946966";b.onclick=()=>{location.href="tel:+919669946966"};
- login.insertAdjacentElement("afterend",b)
+ const help=document.createElement("aside");help.dataset.btsLoginSupport="1";help.style.cssText="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--color-border);font-size:.9rem;line-height:1.7";
+ help.innerHTML='<a href="https://bilaspurtestseries.com/help.html#access">Access Code नहीं मिला / भुगतान की मदद</a><br><a href="https://bilaspurtestseries.com/teacher.html">नया admission? कोर्स और फीस देखें →</a><p style="margin-top:.75rem">सहायता: <a href="tel:+919669946966">96699 46966</a><br>सोम–शनि · शाम 6 से रात 9 बजे</p>';
+ form.insertAdjacentElement("afterend",help)
 }
 function closeAttemptModal(){document.getElementById("bts-attempt-modal")?.remove()}
 async function openAttemptHistory(testCode){
